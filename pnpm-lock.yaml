@@ -207,7 +207,16 @@ importers:
       '@babel/core':
         specifier: ^7.28.5
         version: 7.28.5
+      '@babel/plugin-transform-class-properties':
+        specifier: ^7.27.1
+        version: 7.27.1(@babel/core@7.28.5)
       '@babel/plugin-transform-export-namespace-from':
+        specifier: ^7.27.1
+        version: 7.27.1(@babel/core@7.28.5)
+      '@babel/plugin-transform-private-methods':
+        specifier: ^7.27.1
+        version: 7.27.1(@babel/core@7.28.5)
+      '@babel/plugin-transform-private-property-in-object':
         specifier: ^7.27.1
         version: 7.27.1(@babel/core@7.28.5)
       '@babel/plugin-transform-runtime':
