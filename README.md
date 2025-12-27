@@ -7,7 +7,7 @@
 <h1 align="center">LNReader</h1>
 
 <p align="center">
-  LNReader is a free and open source light novel reader for Android, inspired by Tachiyomi.
+  LNReader is a free and open source light novel reader, available for Android and Web (PWA).
 </p>
 
 <div align="center">
@@ -31,6 +31,8 @@
 
 <h2 align="center">Download</h2>
 
+### Android
+
 <p align="center">
   <a href="https://github.com/LNReader/lnreader/releases/latest">
     <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/LNReader/lnreader?label=Stable&labelColor=0d7377&color=084c4e&style=flat">
@@ -47,6 +49,38 @@
 <p align="center">
   <em>Android 7.0 or higher.</em>
 </p>
+
+### Web/PWA (Progressive Web App)
+
+The web version can be accessed through any modern web browser and installed as a Progressive Web App:
+
+**Features:**
+- ✅ Works on desktop and mobile browsers
+- ✅ Installable on devices (works like a native app)
+- ✅ Offline reading support
+- ✅ Cross-platform (Windows, macOS, Linux, iOS, Android)
+
+**Limitations:**
+- ❌ No volume button controls
+- ❌ Limited background services
+- ⚠️ Some features may work differently than the Android app
+
+**Running locally:**
+```bash
+# Install dependencies
+pnpm install
+
+# Development mode
+pnpm web:dev
+
+# Build for production
+pnpm web:build
+
+# Serve production build
+pnpm web:serve
+```
+
+See [MIGRATION.md](./MIGRATION.md) for detailed information about the web version.
 
 <h2 align="center">Screenshots</h2>
 
