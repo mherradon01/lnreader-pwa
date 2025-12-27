@@ -12,6 +12,7 @@ module.exports = (env, argv) => {
       path: path.resolve(__dirname, 'web-build'),
       filename: isDev ? '[name].js' : '[name].[contenthash].js',
       publicPath: '/',
+      globalObject: 'this',
     },
     mode: isDev ? 'development' : 'production',
     devtool: isDev ? 'eval-source-map' : 'source-map',
