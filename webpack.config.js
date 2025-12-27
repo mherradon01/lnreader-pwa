@@ -23,6 +23,17 @@ module.exports = (env, argv) => {
       hot: true,
       port: 3000,
       open: true,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+      setupMiddlewares: (middlewares, devServer) => {
+        // Ensure manifest.json is served with correct MIME type
+        devServer.app.get('/manifest.json', (req, res) => {
+          res.setHeader('Content-Type', 'application/json');
+          res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
+        });
+        return middlewares;
+      },
     },
     resolve: {
       extensions: ['.web.tsx', '.web.ts', '.web.jsx', '.web.js', '.tsx', '.ts', '.jsx', '.js', '.mjs'],
@@ -156,6 +167,10 @@ module.exports = (env, argv) => {
       new HtmlWebpackPlugin({
         template: './public/index.html',
         favicon: './public/favicon.ico',
+      }),
+      new webpack.DefinePlugin({
+        __DEV__: JSON.stringify(isDev),
+        'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production'),
       }),
       new webpack.ProvidePlugin({
         'React.unstable_batchedUpdates': ['react-dom', 'unstable_batchedUpdates'],
