@@ -102,6 +102,7 @@ module.exports = (env, argv) => {
             /node_modules\/@legendapp/,
             /node_modules\/@expo/,
             /node_modules\/@cd-z/,
+            /node_modules\/@react-navigation/,
             /node_modules\/expo/,
             /node_modules\/expo-sqlite/,
             /node_modules\/expo-notifications/,
