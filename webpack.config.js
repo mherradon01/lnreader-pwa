@@ -95,6 +95,8 @@ module.exports = (env, argv) => {
             path.resolve(__dirname, 'App.web.tsx'),
             path.resolve(__dirname, 'index.web.tsx'),
             /node_modules\/@gorhom/,
+            /node_modules\/react-native-reanimated/,
+            /node_modules\/react-native-gesture-handler/,
             /node_modules\/react-native-shimmer-placeholder/,
             /node_modules\/react-native-error-boundary/,
             /node_modules\/@legendapp/,
