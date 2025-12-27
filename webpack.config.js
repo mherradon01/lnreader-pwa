@@ -171,6 +171,7 @@ module.exports = (env, argv) => {
       new webpack.DefinePlugin({
         __DEV__: JSON.stringify(isDev),
         'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production'),
+        'process.env.EXPO_OS': JSON.stringify('web'),
       }),
       new webpack.ProvidePlugin({
         process: 'process/browser',
