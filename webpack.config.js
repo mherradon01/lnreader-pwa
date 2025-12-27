@@ -1,4 +1,5 @@
 const path = require('path');
+const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const { InjectManifest } = require('workbox-webpack-plugin');
 
@@ -31,6 +32,7 @@ module.exports = (env, argv) => {
         'react-native-mmkv': path.resolve(__dirname, 'shims/react-native-mmkv.web.ts'),
         'react-native-lottie-splash-screen': path.resolve(__dirname, 'shims/react-native-lottie-splash-screen.web.ts'),
         'react-native-background-actions': path.resolve(__dirname, 'shims/react-native-background-actions.web.ts'),
+        '@react-native-documents/picker': path.resolve(__dirname, 'shims/react-native-documents-picker.web.ts'),
         '@components': path.resolve(__dirname, 'src/components'),
         '@database': path.resolve(__dirname, 'src/database'),
         '@hooks': path.resolve(__dirname, 'src/hooks'),
@@ -71,7 +73,18 @@ module.exports = (env, argv) => {
         },
         {
           test: /\.(ts|tsx|js|jsx)$/,
-          exclude: /node_modules/,
+          include: [
+            path.resolve(__dirname, 'src'),
+            path.resolve(__dirname, 'specs'),
+            path.resolve(__dirname, 'shims'),
+            path.resolve(__dirname, 'App.tsx'),
+            path.resolve(__dirname, 'App.web.tsx'),
+            path.resolve(__dirname, 'index.web.tsx'),
+            /node_modules\/@gorhom/,
+            /node_modules\/react-native-shimmer-placeholder/,
+            /node_modules\/react-native-error-boundary/,
+            /node_modules\/@legendapp/,
+          ],
           use: {
             loader: 'babel-loader',
             options: {
@@ -119,6 +132,20 @@ module.exports = (env, argv) => {
         template: './public/index.html',
         favicon: './public/favicon.ico',
       }),
+      new webpack.ProvidePlugin({
+        'React.unstable_batchedUpdates': ['react-dom', 'unstable_batchedUpdates'],
+      }),
+      new webpack.NormalModuleReplacementPlugin(
+        /react-native$/,
+        (resource) => {
+          // Only replace if it's trying to import specific missing exports
+          if (resource.request === 'react-native' && resource.context.includes('node_modules')) {
+            const polyfills = path.resolve(__dirname, 'shims/react-native-polyfills.web.ts');
+            // We still want to use react-native-web for most things
+            // but provide fallbacks for missing exports
+          }
+        }
+      ),
       ...(!isDev ? [
         new InjectManifest({
           swSrc: './src-sw.js',

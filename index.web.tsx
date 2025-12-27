@@ -1,7 +1,13 @@
 import 'react-native-url-polyfill/auto';
 import React from 'react';
 import { AppRegistry } from 'react-native';
+import { unstable_batchedUpdates } from 'react-dom';
 import App from './App';
+
+// Polyfill unstable_batchedUpdates for libraries that expect it from react-native
+if (typeof (window as any).ReactNativeWebUnstableBatchedUpdates === 'undefined') {
+  (window as any).ReactNativeWebUnstableBatchedUpdates = unstable_batchedUpdates;
+}
 
 // Register the app for web
 AppRegistry.registerComponent('LNReader', () => App);
