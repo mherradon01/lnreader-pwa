@@ -173,6 +173,9 @@ module.exports = (env, argv) => {
         'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production'),
       }),
       new webpack.ProvidePlugin({
+        process: 'process/browser',
+      }),
+      new webpack.ProvidePlugin({
         'React.unstable_batchedUpdates': ['react-dom', 'unstable_batchedUpdates'],
       }),
       new webpack.NormalModuleReplacementPlugin(
