@@ -23,9 +23,6 @@ module.exports = (env, argv) => {
       hot: true,
       port: 3000,
       open: true,
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-      },
       setupMiddlewares: (middlewares, devServer) => {
         // Ensure manifest.json is served with correct MIME type
         devServer.app.get('/manifest.json', (req, res) => {
@@ -45,6 +42,7 @@ module.exports = (env, argv) => {
         'react-native-background-actions': path.resolve(__dirname, 'shims/react-native-background-actions.web.ts'),
         '@react-native-documents/picker': path.resolve(__dirname, 'shims/react-native-documents-picker.web.ts'),
         '@react-native-vector-icons/get-image': path.resolve(__dirname, 'shims/react-native-vector-icons-get-image.web.js'),
+        'expo-sqlite': path.resolve(__dirname, 'shims/expo-sqlite.web.ts'),
         '@components': path.resolve(__dirname, 'src/components'),
         '@database': path.resolve(__dirname, 'src/database'),
         '@hooks': path.resolve(__dirname, 'src/hooks'),
@@ -167,6 +165,8 @@ module.exports = (env, argv) => {
       new HtmlWebpackPlugin({
         template: './public/index.html',
         favicon: './public/favicon.ico',
+        inject: 'body',
+        scriptLoading: 'defer',
       }),
       new webpack.DefinePlugin({
         __DEV__: JSON.stringify(isDev),
@@ -198,6 +198,7 @@ module.exports = (env, argv) => {
     ],
     ignoreWarnings: [
       /Failed to parse source map/,
+      /Critical dependency: require function is used in a way/,
       /BABEL_SHOW_CONFIG_FOR/,
     ],
   };
