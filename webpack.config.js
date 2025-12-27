@@ -24,9 +24,13 @@ module.exports = (env, argv) => {
       open: true,
     },
     resolve: {
-      extensions: ['.web.tsx', '.web.ts', '.web.jsx', '.web.js', '.tsx', '.ts', '.jsx', '.js'],
+      extensions: ['.web.tsx', '.web.ts', '.web.jsx', '.web.js', '.tsx', '.ts', '.jsx', '.js', '.mjs'],
+      fullySpecified: false,
       alias: {
         'react-native$': 'react-native-web',
+        'react-native-mmkv': path.resolve(__dirname, 'shims/react-native-mmkv.web.ts'),
+        'react-native-lottie-splash-screen': path.resolve(__dirname, 'shims/react-native-lottie-splash-screen.web.ts'),
+        'react-native-background-actions': path.resolve(__dirname, 'shims/react-native-background-actions.web.ts'),
         '@components': path.resolve(__dirname, 'src/components'),
         '@database': path.resolve(__dirname, 'src/database'),
         '@hooks': path.resolve(__dirname, 'src/hooks'),
@@ -42,9 +46,29 @@ module.exports = (env, argv) => {
         '@specs': path.resolve(__dirname, 'specs'),
         'react-native-vector-icons/MaterialCommunityIcons': '@react-native-vector-icons/material-design-icons',
       },
+      fallback: {
+        'crypto': false,
+        'stream': false,
+        'buffer': false,
+        'util': false,
+        'assert': false,
+        'http': false,
+        'https': false,
+        'os': false,
+        'url': false,
+        'zlib': false,
+        'fs': false,
+        'path': false,
+      },
     },
     module: {
       rules: [
+        {
+          test: /\.m?js$/,
+          resolve: {
+            fullySpecified: false,
+          },
+        },
         {
           test: /\.(ts|tsx|js|jsx)$/,
           exclude: /node_modules/,
@@ -101,6 +125,10 @@ module.exports = (env, argv) => {
           swDest: 'service-worker.js',
         }),
       ] : []),
+    ],
+    ignoreWarnings: [
+      /Failed to parse source map/,
+      /BABEL_SHOW_CONFIG_FOR/,
     ],
   };
 };
