@@ -124,12 +124,21 @@ module.exports = (env, argv) => {
             loader: 'babel-loader',
             options: {
               presets: [
-                '@babel/preset-env',
+                ['@babel/preset-env', {
+                  modules: 'auto',
+                  targets: {
+                    browsers: ['last 2 versions', 'not dead', '> 0.2%']
+                  }
+                }],
                 '@babel/preset-react',
                 '@babel/preset-typescript',
               ],
               plugins: [
                 ['@babel/plugin-transform-runtime'],
+                ['@babel/plugin-transform-modules-commonjs', {
+                  allowTopLevelThis: true,
+                  loose: true,
+                }],
                 ['@babel/plugin-transform-class-properties', { loose: true }],
                 ['@babel/plugin-transform-private-methods', { loose: true }],
                 ['@babel/plugin-transform-private-property-in-object', { loose: true }],
