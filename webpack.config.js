@@ -13,6 +13,17 @@ module.exports = (env, argv) => {
       filename: isDev ? '[name].js' : '[name].[contenthash].js',
       publicPath: '/',
       globalObject: 'this',
+      environment: {
+        // This tells webpack that the target environment supports these features
+        // But we still need to provide fallbacks for missing globals
+        arrowFunction: true,
+        bigIntLiteral: false,
+        const: true,
+        destructuring: true,
+        dynamicImport: false,
+        forOf: true,
+        module: true,
+      },
     },
     mode: isDev ? 'development' : 'production',
     devtool: isDev ? 'eval-source-map' : 'source-map',
@@ -197,6 +208,11 @@ module.exports = (env, argv) => {
       }),
       new webpack.ProvidePlugin({
         'React.unstable_batchedUpdates': ['react-dom', 'unstable_batchedUpdates'],
+      }),
+      // Provide exports and module globals for packages that use CommonJS patterns in ES modules
+      new webpack.ProvidePlugin({
+        exports: [path.resolve(__dirname, 'shims/exports-shim.js'), 'exports'],
+        module: [path.resolve(__dirname, 'shims/exports-shim.js'), 'module'],
       }),
       new webpack.NormalModuleReplacementPlugin(
         /react-native$/,
