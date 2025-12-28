@@ -10,10 +10,11 @@ module.exports = function(source) {
     return source;
   }
   
-  // Only inject if file uses Object.defineProperty(exports, "__esModule") pattern
-  // This is the specific pattern that causes the error
-  const needsExportsPolyfill = source.includes('Object.defineProperty(exports,') && source.includes('"__esModule"');
-  const hasExportsDefined = source.includes('var exports') || source.includes('let exports') || source.includes('const exports');
+  // Detect if file uses exports but doesn't define it
+  // Check for any usage of exports.X, exports[X], or Object.defineProperty(exports
+  const usesExports = /exports\.|exports\[|Object\.defineProperty\s*\(\s*exports/.test(source);
+  const hasExportsDefined = /(?:var|let|const)\s+exports/.test(source);
+  const needsExportsPolyfill = usesExports && !hasExportsDefined;
   
   console.log('[exports-polyfill-loader] Processing:', resourcePath);
   console.log('[exports-polyfill-loader]   needsExportsPolyfill:', needsExportsPolyfill);
