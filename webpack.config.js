@@ -13,6 +13,8 @@ module.exports = (env, argv) => {
       filename: isDev ? '[name].js' : '[name].[contenthash].js',
       publicPath: '/',
       globalObject: 'this',
+      libraryTarget: 'umd',
+      umdNamedDefine: true,
     },
     mode: isDev ? 'development' : 'production',
     devtool: isDev ? 'eval-source-map' : 'source-map',
