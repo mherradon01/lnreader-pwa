@@ -17,8 +17,10 @@ module.exports = function(source) {
   const needsExportsPolyfill = usesExports && !hasExportsDefined;
   
   console.log('[exports-polyfill-loader] Processing:', resourcePath);
-  console.log('[exports-polyfill-loader]   needsExportsPolyfill:', needsExportsPolyfill);
+  console.log('[exports-polyfill-loader]   usesExports:', usesExports);
   console.log('[exports-polyfill-loader]   hasExportsDefined:', hasExportsDefined);
+  console.log('[exports-polyfill-loader]   needsExportsPolyfill:', needsExportsPolyfill);
+  console.log('[exports-polyfill-loader]   First 200 chars:', source.substring(0, 200));
   
   if (needsExportsPolyfill && !hasExportsDefined) {
     console.log('[exports-polyfill-loader] ✅ INJECTING exports for:', resourcePath);
