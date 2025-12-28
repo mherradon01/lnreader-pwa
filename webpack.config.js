@@ -125,7 +125,7 @@ module.exports = (env, argv) => {
             options: {
               presets: [
                 ['@babel/preset-env', {
-                  modules: 'auto',
+                  modules: false, // Let webpack handle module transformation
                   targets: {
                     browsers: ['last 2 versions', 'not dead', '> 0.2%']
                   }
@@ -134,10 +134,8 @@ module.exports = (env, argv) => {
                 '@babel/preset-typescript',
               ],
               plugins: [
-                ['@babel/plugin-transform-runtime'],
-                ['@babel/plugin-transform-modules-commonjs', {
-                  allowTopLevelThis: true,
-                  loose: true,
+                ['@babel/plugin-transform-runtime', {
+                  regenerator: true,
                 }],
                 ['@babel/plugin-transform-class-properties', { loose: true }],
                 ['@babel/plugin-transform-private-methods', { loose: true }],
