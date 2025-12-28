@@ -82,6 +82,15 @@ module.exports = (env, argv) => {
             fullySpecified: false,
           },
         },
+        // Apply exports polyfill to @react-navigation packages first
+        {
+          test: /\.(js|jsx)$/,
+          include: /node_modules\/@react-navigation/,
+          enforce: 'pre',
+          use: {
+            loader: path.resolve(__dirname, 'webpack-loaders/exports-polyfill-loader.js'),
+          },
+        },
         {
           test: /\.(ts|tsx|js|jsx)$/,
           exclude: [
