@@ -209,11 +209,6 @@ module.exports = (env, argv) => {
       new webpack.ProvidePlugin({
         'React.unstable_batchedUpdates': ['react-dom', 'unstable_batchedUpdates'],
       }),
-      // Provide exports and module globals for packages that use CommonJS patterns in ES modules
-      new webpack.ProvidePlugin({
-        exports: [path.resolve(__dirname, 'shims/exports-shim.js'), 'exports'],
-        module: [path.resolve(__dirname, 'shims/exports-shim.js'), 'module'],
-      }),
       new webpack.NormalModuleReplacementPlugin(
         /react-native$/,
         (resource) => {

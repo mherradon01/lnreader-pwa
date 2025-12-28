@@ -1,34 +1,23 @@
 /**
  * Webpack loader to inject exports/module.exports definitions
- * ONLY for @react-navigation packages that have the specific CommonJS bug
+ * ONLY for @react-navigation packages that have CommonJS/ESM interop issues
  */
 module.exports = function(source) {
   const resourcePath = this.resourcePath;
   
-  // ONLY process @react-navigation packages (very restrictive now!)
+  // ONLY process @react-navigation packages
   if (!resourcePath.includes('@react-navigation')) {
     return source;
   }
   
-  // Detect if file uses exports but doesn't define it
-  // Check for any usage of exports.X, exports[X], or Object.defineProperty(exports
-  const usesExports = /exports\.|exports\[|Object\.defineProperty\s*\(\s*exports/.test(source);
-  const hasExportsDefined = /(?:var|let|const)\s+exports/.test(source);
-  const needsExportsPolyfill = usesExports && !hasExportsDefined;
+  // The actual source files use CommonJS `exports` but Babel transforms them to ES modules
+  // At runtime, some code paths still reference the original `exports` variable
+  // So we need to provide it even though we can't detect it in the transformed source
   
-  console.log('[exports-polyfill-loader] Processing:', resourcePath);
-  console.log('[exports-polyfill-loader]   usesExports:', usesExports);
-  console.log('[exports-polyfill-loader]   hasExportsDefined:', hasExportsDefined);
-  console.log('[exports-polyfill-loader]   needsExportsPolyfill:', needsExportsPolyfill);
-  console.log('[exports-polyfill-loader]   First 200 chars:', source.substring(0, 200));
+  // Always inject for @react-navigation packages since they have this mixed module issue
+  console.log('[exports-polyfill-loader] ✅ INJECTING exports for @react-navigation:', resourcePath);
   
-  if (needsExportsPolyfill && !hasExportsDefined) {
-    console.log('[exports-polyfill-loader] ✅ INJECTING exports for:', resourcePath);
-    
-    // Just inject the definitions at the top - don't add export default
-    // Let the existing exports in the file handle the exporting
-    return `var exports = {}; var module = { exports: exports };\n${source}`;
-  }
-  
-  return source;
+  // Inject exports and module at the top
+  // These will be no-ops if not used, but available if needed at runtime
+  return `var exports = {}; var module = { exports: exports };\n${source}`;
 };
