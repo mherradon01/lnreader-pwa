@@ -14,10 +14,7 @@ module.exports = function(source) {
   // At runtime, some code paths still reference the original `exports` variable
   // So we need to provide it even though we can't detect it in the transformed source
   
-  // Always inject for @react-navigation packages since they have this mixed module issue
-  console.log('[exports-polyfill-loader] ✅ INJECTING exports for @react-navigation:', resourcePath);
-  
-  // Inject exports and module at the top
+  // Inject exports and module at the top only if they're not already defined
   // These will be no-ops if not used, but available if needed at runtime
-  return `var exports = {}; var module = { exports: exports };\n${source}`;
+  return `if (typeof exports === 'undefined') { var exports = {}; }\nif (typeof module === 'undefined') { var module = { exports: exports }; }\n${source}`;
 };
