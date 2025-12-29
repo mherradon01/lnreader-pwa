@@ -1,20 +1,37 @@
 /**
  * Webpack loader to inject exports/module.exports definitions
- * ONLY for @react-navigation packages that have CommonJS/ESM interop issues
+ * for @react-navigation packages that have CommonJS/ESM interop issues
+ * 
+ * React Navigation v7 ships pre-built files in lib/module that use ESM syntax
+ * but internally still reference CommonJS `exports` for some compatibility layers.
+ * This loader provides those globals only when needed.
  */
 module.exports = function(source) {
   const resourcePath = this.resourcePath;
   
-  // ONLY process @react-navigation packages
-  if (!resourcePath.includes('@react-navigation')) {
+  // ONLY process @react-navigation packages in lib/module directories
+  // These are the pre-built ES module files that may reference exports
+  if (!resourcePath.includes('@react-navigation') || !resourcePath.includes('/lib/module/')) {
     return source;
   }
   
-  // The actual source files use CommonJS `exports` but Babel transforms them to ES modules
-  // At runtime, some code paths still reference the original `exports` variable
-  // So we need to provide it even though we can't detect it in the transformed source
+  // Check if the source actually uses 'exports' or 'module'
+  // This handles both direct usage and transformed code
+  const usesExports = /\bexports\b/.test(source);
+  const usesModule = /\bmodule\.exports\b/.test(source);
   
-  // Inject exports and module at the top only if they're not already defined
-  // These will be no-ops if not used, but available if needed at runtime
-  return `if (typeof exports === 'undefined') { var exports = {}; }\nif (typeof module === 'undefined') { var module = { exports: exports }; }\n${source}`;
+  if (!usesExports && !usesModule) {
+    return source;
+  }
+  
+  // Inject a self-contained IIFE that provides exports/module only if needed
+  // This approach is safer than global var declarations
+  const wrapper = `(function() {
+  var exports = {};
+  var module = { exports: exports };
+  ${source}
+  return module.exports;
+})();`;
+  
+  return wrapper;
 };

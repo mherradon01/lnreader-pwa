@@ -93,9 +93,10 @@ module.exports = (env, argv) => {
             fullySpecified: false,
           },
         },
-        // Apply exports polyfill to all JS files before any other processing
+        // Apply exports polyfill loader ONLY to @react-navigation packages
         {
           test: /\.(js|jsx|mjs)$/,
+          include: /@react-navigation/,
           enforce: 'pre',
           use: {
             loader: path.resolve(__dirname, 'webpack-loaders/exports-polyfill-loader.js'),
