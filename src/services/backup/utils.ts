@@ -2,7 +2,7 @@ import { SELF_HOST_BACKUP } from '@hooks/persisted/useSelfHost';
 import { OLD_TRACKED_NOVEL_PREFIX } from '@hooks/persisted/migrations/trackerMigration';
 import { LAST_UPDATE_TIME } from '@hooks/persisted/useUpdates';
 import { MMKVStorage } from '@utils/mmkv/mmkv';
-import { version } from '../../../package.json';
+import packageJson from '../../../package.json';
 import {
   _restoreNovelAndChapters,
   getAllNovels,
@@ -68,7 +68,7 @@ export const prepareBackupData = async (cacheDirPath: string) => {
   try {
     NativeFile.writeFile(
       cacheDirPath + '/' + BackupEntryName.VERSION,
-      JSON.stringify({ version: version }),
+      JSON.stringify({ version: packageJson.version }),
     );
   } catch (error: any) {
     showToast(

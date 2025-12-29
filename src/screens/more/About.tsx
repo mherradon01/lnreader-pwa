@@ -10,22 +10,22 @@ import { List, SafeAreaView } from '@components';
 import { AboutScreenProps } from '@navigators/types';
 import { GIT_HASH, RELEASE_DATE, BUILD_TYPE } from '@env';
 import * as Clipboard from 'expo-clipboard';
-import { version } from '../../../package.json';
+import packageJson from '../../../package.json';
 
 const AboutScreen = ({ navigation }: AboutScreenProps) => {
   const theme = useTheme();
 
   function getBuildName() {
     if (!GIT_HASH || !RELEASE_DATE || !BUILD_TYPE) {
-      return `Custom build ${version}`;
+      return `Custom build ${packageJson.version}`;
     } else {
       const localDateTime = isNaN(Number(RELEASE_DATE))
         ? RELEASE_DATE
         : new Date(Number(RELEASE_DATE)).toLocaleString();
       if (BUILD_TYPE === 'Release') {
-        return `${BUILD_TYPE} ${version} (${localDateTime})`;
+        return `${BUILD_TYPE} ${packageJson.version} (${localDateTime})`;
       }
-      return `${BUILD_TYPE} ${version} (${localDateTime}) Commit: ${GIT_HASH}`;
+      return `${BUILD_TYPE} ${packageJson.version} (${localDateTime}) Commit: ${GIT_HASH}`;
     }
   }
 

@@ -2,6 +2,7 @@ const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const { InjectManifest } = require('workbox-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = (env, argv) => {
   const isDev = argv.mode === 'development';
@@ -47,13 +48,19 @@ module.exports = (env, argv) => {
     resolve: {
       extensions: ['.web.tsx', '.web.ts', '.web.jsx', '.web.js', '.tsx', '.ts', '.jsx', '.js', '.mjs'],
       fullySpecified: false,
+      mainFields: ['browser', 'module', 'main'],
       alias: {
         'react-native$': path.resolve(__dirname, 'shims/react-native.web.js'),
+        'react-native-reanimated$': path.resolve(__dirname, 'shims/react-native-reanimated.web.js'),
+        '@gorhom/bottom-sheet': path.resolve(__dirname, 'shims/gorhom-bottom-sheet.web.js'),
+        'react-native-tab-view': path.resolve(__dirname, 'shims/react-native-tab-view.web.js'),
         'react-native-mmkv': path.resolve(__dirname, 'shims/react-native-mmkv.web.ts'),
         'react-native-lottie-splash-screen': path.resolve(__dirname, 'shims/react-native-lottie-splash-screen.web.ts'),
         'react-native-background-actions': path.resolve(__dirname, 'shims/react-native-background-actions.web.ts'),
         '@react-native-documents/picker': path.resolve(__dirname, 'shims/react-native-documents-picker.web.ts'),
         '@react-native-vector-icons/get-image': path.resolve(__dirname, 'shims/react-native-vector-icons-get-image.web.js'),
+        '@react-native-cookies/cookies': path.resolve(__dirname, 'shims/react-native-cookies.web.ts'),
+        'react-native-reanimated/scripts/validate-worklets-version': path.resolve(__dirname, 'shims/reanimated-validate-worklets-version.web.js'),
         'expo-sqlite': path.resolve(__dirname, 'shims/expo-sqlite.web.ts'),
         '@components': path.resolve(__dirname, 'src/components'),
         '@database': path.resolve(__dirname, 'src/database'),
@@ -117,13 +124,14 @@ module.exports = (env, argv) => {
             path.resolve(__dirname, 'index.web.tsx'),
             /node_modules\/@gorhom/,
             /node_modules\/react-native-reanimated/,
+            /node_modules\/react-native-worklets/,
             /node_modules\/react-native-gesture-handler/,
             /node_modules\/react-native-shimmer-placeholder/,
             /node_modules\/react-native-error-boundary/,
             /node_modules\/@legendapp/,
             /node_modules\/@expo/,
             /node_modules\/@cd-z/,
-            /node_modules\/@react-navigation/,
+            /@react-navigation/,
             /node_modules\/expo/,
             /node_modules\/expo-sqlite/,
             /node_modules\/expo-notifications/,
@@ -150,7 +158,7 @@ module.exports = (env, argv) => {
                     browsers: ['last 2 versions', 'not dead', '> 0.2%']
                   }
                 }],
-                '@babel/preset-react',
+                ['@babel/preset-react', { runtime: 'automatic' }],
                 '@babel/preset-typescript',
               ],
               plugins: [
@@ -199,6 +207,12 @@ module.exports = (env, argv) => {
         inject: 'body',
         scriptLoading: 'defer',
       }),
+      new CopyWebpackPlugin({
+        patterns: [
+          { from: 'public/fonts', to: 'fonts' },
+          { from: 'public/manifest.json', to: 'manifest.json' },
+        ],
+      }),
       new webpack.DefinePlugin({
         __DEV__: JSON.stringify(isDev),
         'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production'),
@@ -210,6 +224,11 @@ module.exports = (env, argv) => {
       new webpack.ProvidePlugin({
         'React.unstable_batchedUpdates': ['react-dom', 'unstable_batchedUpdates'],
       }),
+      // Replace ALL imports that resolve to react-native-reanimated's Easing.js
+      new webpack.NormalModuleReplacementPlugin(
+        /[\\/]react-native-reanimated[\\/]lib[\\/]module[\\/]Easing\.js$/,
+        path.resolve(__dirname, 'shims/reanimated-easing.web.js')
+      ),
       new webpack.NormalModuleReplacementPlugin(
         /react-native$/,
         (resource) => {

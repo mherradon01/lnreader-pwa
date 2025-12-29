@@ -33,25 +33,29 @@ const App = () => {
   }, [isDbReady, dbError]);
 
   if (dbError) {
-    return <ErrorFallback error={dbError} resetError={retryInitialization} />;
+    return (
+      <SafeAreaProvider>
+        <ErrorFallback error={dbError} resetError={retryInitialization} />
+      </SafeAreaProvider>
+    );
   }
 
   if (!isDbReady) {
-    return null;
+    return <SafeAreaProvider>{null}</SafeAreaProvider>;
   }
 
   return (
     <GestureHandlerRootView style={styles.flex}>
-      <AppErrorBoundary>
-        <SafeAreaProvider>
+      <SafeAreaProvider>
+        <AppErrorBoundary>
           <PaperProvider>
             <BottomSheetModalProvider>
               <StatusBar translucent={true} backgroundColor="transparent" />
               <Main />
             </BottomSheetModalProvider>
           </PaperProvider>
-        </SafeAreaProvider>
-      </AppErrorBoundary>
+        </AppErrorBoundary>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 };

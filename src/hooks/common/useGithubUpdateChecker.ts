@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { version } from '../../../package.json';
+import packageJson from '../../../package.json';
 import { newer } from '@utils/compareVersion';
 import { MMKVStorage } from '@utils/mmkv/mmkv';
 
@@ -68,7 +68,7 @@ export const useGithubUpdateChecker = (): GithubUpdate => {
   };
 
   const isNewVersion = (versionTag: string) => {
-    const currentVersion = `${version}`;
+    const currentVersion = `${packageJson.version}`;
     const regex = /[^\\d.]/;
 
     const newVersion = versionTag.replace(regex, '');

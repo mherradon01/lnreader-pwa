@@ -43,6 +43,62 @@ class WebSQLiteDatabase {
     };
   }
 
+  withTransactionSync(callback: () => void): void {
+    console.warn('SQLite withTransactionSync called on web (no-op)');
+    try {
+      callback();
+    } catch (error) {
+      console.warn('Transaction callback error (ignored on web):', error);
+    }
+  }
+
+  async withTransactionAsync(callback: () => Promise<void>): Promise<void> {
+    console.warn('SQLite withTransactionAsync called on web (no-op)');
+    try {
+      await callback();
+    } catch (error) {
+      console.warn('Transaction callback error (ignored on web):', error);
+    }
+  }
+
+  // Async methods
+  async execAsync(source: string): Promise<any> {
+    console.warn('SQLite execAsync called on web (no-op):', source);
+    return { rows: { _array: [] } };
+  }
+
+  async runAsync(source: string, ...params: any[]): Promise<any> {
+    console.warn('SQLite runAsync called on web (no-op):', source, params);
+    return { changes: 0, lastInsertRowId: 0 };
+  }
+
+  async getFirstAsync<T = any>(source: string, ...params: any[]): Promise<T | null> {
+    console.warn('SQLite getFirstAsync called on web (no-op):', source, params);
+    return null;
+  }
+
+  async getAllAsync<T = any>(source: string, ...params: any[]): Promise<T[]> {
+    console.warn('SQLite getAllAsync called on web (no-op):', source, params);
+    return [];
+  }
+
+  async prepareAsync(source: string): Promise<any> {
+    console.warn('SQLite prepareAsync called on web (no-op):', source);
+    return {
+      executeAsync: async (params?: any[]) => {
+        console.warn('SQLite statement executeAsync called on web (no-op):', params);
+        return { rows: { _array: [] }, changes: 0, lastInsertRowId: 0 };
+      },
+      finalizeAsync: async () => {
+        console.warn('SQLite statement finalizeAsync called on web (no-op)');
+      },
+    };
+  }
+
+  async closeAsync(): Promise<void> {
+    console.warn('SQLite closeAsync called on web (no-op)');
+  }
+
   closeSync(): void {
     console.warn('SQLite closeSync called on web (no-op)');
   }
