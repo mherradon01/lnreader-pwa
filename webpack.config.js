@@ -93,19 +93,36 @@ module.exports = (env, argv) => {
             fullySpecified: false,
           },
         },
-        // Apply exports polyfill loader ONLY to @react-navigation packages
+        // Special handling for @react-navigation packages - transform them to CommonJS
         {
           test: /\.(js|jsx|mjs)$/,
-          include: /@react-navigation/,
-          enforce: 'pre',
+          include: /@react-navigation.*\/lib\/module/,
           use: {
-            loader: path.resolve(__dirname, 'webpack-loaders/exports-polyfill-loader.js'),
+            loader: 'babel-loader',
+            options: {
+              presets: [
+                ['@babel/preset-env', {
+                  modules: 'commonjs', // Transform @react-navigation to CommonJS
+                  targets: {
+                    browsers: ['last 2 versions', 'not dead', '> 0.2%']
+                  }
+                }],
+              ],
+              plugins: [
+                ['@babel/plugin-transform-modules-commonjs', {
+                  strict: false,
+                  strictMode: false,
+                  allowTopLevelThis: true,
+                }],
+              ],
+            },
           },
         },
         {
           test: /\.(ts|tsx|js|jsx)$/,
           exclude: [
             /src-sw\.js$/,
+            /@react-navigation.*\/lib\/module/, // Exclude @react-navigation - handled above
           ],
           include: [
             path.resolve(__dirname, 'src'),
