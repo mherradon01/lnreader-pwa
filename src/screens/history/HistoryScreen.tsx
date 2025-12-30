@@ -11,7 +11,7 @@ import {
 } from '@components';
 import HistoryCard from './components/HistoryCard/HistoryCard';
 
-import { useSearch, useBoolean } from '@hooks';
+import { useSearch, useBoolean, useBlurOnUnfocus } from '@hooks';
 import { useTheme, useHistory } from '@hooks/persisted';
 
 import { convertDateToISOString } from '@database/utils/convertDateToISOString';
@@ -24,6 +24,10 @@ import { HistoryScreenProps } from '@navigators/types';
 
 const HistoryScreen = ({ navigation }: HistoryScreenProps) => {
   const theme = useTheme();
+  
+  // Blur focused element when leaving screen to prevent aria-hidden warning on web
+  useBlurOnUnfocus();
+  
   const {
     isLoading,
     history,

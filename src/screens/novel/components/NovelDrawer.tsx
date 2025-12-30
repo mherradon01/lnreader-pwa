@@ -59,6 +59,7 @@ export default function NovelDrawer({
         Novel pages
       </Text>
       <LegendList
+        style={{ flex: 1 }}
         data={pages}
         recycleItems
         extraData={pageIndex}

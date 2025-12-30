@@ -30,7 +30,8 @@ export const getLibraryNovelsFromDb = (
     query += ` ORDER BY ${sortOrder}`;
   }
 
-  return getAllSync<NovelInfo>([query, [searchText ?? '']]);
+  const params = searchText ? [`%${searchText}%`] : [];
+  return getAllSync<NovelInfo>([query, params]);
 };
 
 const getNovelOfCategoryQuery =

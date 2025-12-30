@@ -358,10 +358,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.25)',
     elevation: 5,
   },
   modalContainer: {

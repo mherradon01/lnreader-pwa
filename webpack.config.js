@@ -36,6 +36,15 @@ module.exports = (env, argv) => {
       hot: true,
       port: 3000,
       open: true,
+      proxy: [
+        {
+          context: ['/github-proxy'],
+          target: 'https://raw.githubusercontent.com',
+          pathRewrite: { '^/github-proxy': '' },
+          changeOrigin: true,
+          secure: true,
+        },
+      ],
       setupMiddlewares: (middlewares, devServer) => {
         // Ensure manifest.json is served with correct MIME type
         devServer.app.get('/manifest.json', (req, res) => {
@@ -211,6 +220,7 @@ module.exports = (env, argv) => {
         patterns: [
           { from: 'public/fonts', to: 'fonts' },
           { from: 'public/manifest.json', to: 'manifest.json' },
+          { from: 'public/sql-wasm.wasm', to: 'sql-wasm.wasm' },
         ],
       }),
       new webpack.DefinePlugin({

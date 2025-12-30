@@ -1,5 +1,6 @@
 import { reverse, uniqBy } from 'lodash-es';
 import { newer } from '@utils/compareVersion';
+import { proxyFetch } from '@utils/proxyFetch';
 
 // packages for plugins
 import {
@@ -85,7 +86,7 @@ const plugins: Record<string, Plugin | undefined> = {};
 const installPlugin = async (
   _plugin: PluginItem,
 ): Promise<Plugin | undefined> => {
-  const rawCode = await fetch(_plugin.url, {
+  const rawCode = await proxyFetch(_plugin.url, {
     headers: { 'pragma': 'no-cache', 'cache-control': 'no-cache' },
   }).then(res => res.text());
   const plugin = initPlugin(_plugin.id, rawCode);
@@ -140,7 +141,7 @@ const fetchPlugins = async (): Promise<PluginItem[]> => {
   const allRepositories = getRepositoriesFromDb();
 
   const repoPluginsRes = await Promise.allSettled(
-    allRepositories.map(({ url }) => fetch(url).then(res => res.json())),
+    allRepositories.map(({ url }) => proxyFetch(url).then(res => res.json())),
   );
 
   repoPluginsRes.forEach(repoPlugins => {

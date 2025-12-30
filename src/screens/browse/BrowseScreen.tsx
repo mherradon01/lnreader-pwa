@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { TabView, TabBar } from 'react-native-tab-view';
 
-import { useSearch } from '@hooks';
+import { useSearch, useBlurOnUnfocus } from '@hooks';
 import { usePlugins, useTheme } from '@hooks/persisted';
 import { getString } from '@strings/translations';
 
@@ -20,6 +20,9 @@ const BrowseScreen = ({ navigation }: BrowseScreenProps) => {
   const theme = useTheme();
   const { searchText, setSearchText, clearSearchbar } = useSearch();
   const { languagesFilter } = usePlugins();
+
+  // Blur focused element when leaving screen to prevent aria-hidden warning on web
+  useBlurOnUnfocus();
 
   const searchbarActions = useMemo(
     () =>

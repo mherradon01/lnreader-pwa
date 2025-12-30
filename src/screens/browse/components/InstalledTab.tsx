@@ -102,6 +102,7 @@ export const InstalledTab = memo(
 
     return (
       <LegendList
+        style={{ flex: 1 }}
         estimatedItemSize={64}
         data={searchedPlugins}
         recycleItems

@@ -159,6 +159,7 @@ export const AvailableTab = memo(({ searchText, theme }: AvailableTabProps) => {
 
   return (
     <LegendList
+      style={{ flex: 1 }}
       estimatedItemSize={64}
       data={searchedPlugins}
       recycleItems

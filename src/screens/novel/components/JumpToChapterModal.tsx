@@ -246,6 +246,7 @@ const JumpToChapterModal = ({
         {result.length ? (
           <View style={[styles.flashlist, { borderColor: theme.outline }]}>
             <LegendList
+              style={{ flex: 1 }}
               recycleItems
               estimatedItemSize={70}
               data={result}

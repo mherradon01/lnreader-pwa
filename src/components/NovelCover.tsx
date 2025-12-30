@@ -395,9 +395,7 @@ const styles = StyleSheet.create({
   },
   compactTitle: {
     color: 'rgba(255,255,255,1)',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10,
+    textShadow: '-1px 1px 10px rgba(0, 0, 0, 0.75)',
   },
   compactTitleContainer: {
     bottom: 4,

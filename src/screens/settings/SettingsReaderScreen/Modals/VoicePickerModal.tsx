@@ -33,6 +33,7 @@ const VoicePickerModal: React.FC<VoicePickerModalProps> = ({
         contentContainerStyle={[styles.containerStyle]}
       >
         <LegendList
+          style={{ flex: 1 }}
           recycleItems
           ListHeaderComponent={
             <TextInput

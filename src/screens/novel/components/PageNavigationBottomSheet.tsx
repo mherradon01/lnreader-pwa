@@ -91,6 +91,7 @@ export default function PageNavigationBottomSheet({
       >
         <BottomSheetScrollView>
           <LegendList
+            style={{ flex: 1 }}
             data={pages}
             recycleItems
             extraData={pageIndex}

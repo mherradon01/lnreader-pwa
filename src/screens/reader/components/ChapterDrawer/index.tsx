@@ -150,6 +150,7 @@ const ChapterDrawer = () => {
         <LoadingScreenV2 theme={theme} />
       ) : (
         <LegendList
+          style={{ flex: 1 }}
           ref={listRef}
           recycleItems
           viewabilityConfig={{

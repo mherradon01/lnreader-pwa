@@ -45,7 +45,7 @@ const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
   const [isMeasured, setIsMeasured] = useState(false);
 
   const menuAnimatedStyle = useAnimatedStyle(() => ({
-    shadowColor: theme.isDark ? '#000' : theme.shadow,
+    boxShadow: theme.isDark ? '0 2px 6px rgba(0, 0, 0, 0.25)' : `0 2px 6px ${theme.shadow}`,
     position: 'absolute' as const,
     left: Math.max(16, Math.min(anchorLayout.x, screenWidth - 220)),
     top: anchorLayout.y + anchorLayout.height + 8,
@@ -172,12 +172,7 @@ const styles = StyleSheet.create({
   menuContainer: {
     borderRadius: 8,
     elevation: 8,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)',
     overflow: 'hidden',
   },
   backdrop: {

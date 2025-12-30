@@ -90,13 +90,7 @@ const styles = StyleSheet.create({
   circle: {
     backgroundColor: 'white',
     elevation: 4,
-    shadowColor: 'black',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 2.5,
+    boxShadow: '0 2px 2.5px rgba(0, 0, 0, 0.2)',
   },
   container: {
     justifyContent: 'center',

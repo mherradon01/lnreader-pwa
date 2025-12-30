@@ -180,10 +180,7 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+    boxShadow: '0 2px 2px rgba(0, 0, 0, 0.2)',
   },
   toggleThumbActive: {
     alignSelf: 'flex-end',

@@ -9,7 +9,7 @@ import {
   SafeAreaView,
 } from '@components';
 
-import { useSearch } from '@hooks';
+import { useSearch, useBlurOnUnfocus } from '@hooks';
 import { useTheme } from '@hooks/persisted';
 import { getString } from '@strings/translations';
 import { ThemeColors } from '@theme/types';
@@ -24,6 +24,10 @@ import { useUpdateContext } from '@components/Context/UpdateContext';
 
 const UpdatesScreen = ({ navigation }: UpdateScreenProps) => {
   const theme = useTheme();
+  
+  // Blur focused element when leaving screen to prevent aria-hidden warning on web
+  useBlurOnUnfocus();
+  
   const {
     updatesOverview,
     getUpdates,

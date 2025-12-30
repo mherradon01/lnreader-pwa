@@ -314,6 +314,7 @@ const NovelScreenList = ({
   return (
     <>
       <LegendList
+        style={{ flex: 1 }}
         ref={listRef}
         estimatedItemSize={64}
         data={chapters}

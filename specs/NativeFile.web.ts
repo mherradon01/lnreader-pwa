@@ -150,7 +150,13 @@ const NativeFile = {
     headers: { [key: string]: string } | Headers,
     body?: string,
   ): Promise<void> => {
-    const response = await fetch(url, {
+    // Proxy GitHub raw URLs to bypass CORS on web
+    let proxyUrl = url;
+    if (url.includes('raw.githubusercontent.com')) {
+      proxyUrl = url.replace('https://raw.githubusercontent.com', '/github-proxy');
+    }
+
+    const response = await fetch(proxyUrl, {
       method,
       headers: headers instanceof Headers ? headers : new Headers(headers),
       body,
