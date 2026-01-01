@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import color from 'color';
 
@@ -9,6 +9,7 @@ import MaterialCommunityIcons from '@react-native-vector-icons/material-design-i
 
 import { showToast } from '@utils/showToast';
 import { getWebSafeCoverUri } from '@utils/coverUtils';
+import { defaultCover } from '@plugins/helpers/constants';
 
 import {
   CoverImage,
@@ -106,7 +107,11 @@ const NovelInfoHeader = ({
     showToast('Not available while loading');
   };
 
-  const coverUri = getWebSafeCoverUri(novel.cover);
+  const [coverUri, setCoverUri] = useState<string>(defaultCover);
+
+  useEffect(() => {
+    getWebSafeCoverUri(novel.cover).then(setCoverUri);
+  }, [novel.cover]);
 
   return (
     <>

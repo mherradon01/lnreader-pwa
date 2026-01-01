@@ -1,8 +1,10 @@
 import { useLibraryContext } from '@components/Context/LibraryContext';
 import ServiceManager, { BackgroundTask } from '@services/ServiceManager';
+import NativeFile from '@specs/NativeFile';
 import { DocumentPickerResult } from 'expo-document-picker';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useMMKVObject } from 'react-native-mmkv';
+import { cacheFile } from '@utils/fileCache';
 
 export default function useImport() {
   const { refetchLibrary } = useLibraryContext();
@@ -23,78 +25,91 @@ export default function useImport() {
 
     console.log('[useImport] Starting import for', pickedNovel.assets.length, 'files');
 
-    // On web, we need to convert blob URIs to base64 immediately
-    // because blob URLs are only valid in the current document context
+    // Process each selected file and store in cache directory
     Promise.all(
       pickedNovel.assets.map(async (asset) => {
-        console.log('[useImport] Processing asset:', asset.name, 'URI:', asset.uri.substring(0, 50));
-        let uri = asset.uri;
+        console.log('[useImport] Processing asset:', asset.name, 'size:', asset.size);
 
-        // If it's a blob URL on web, convert it to base64 data URI
-        if (uri.startsWith('blob:')) {
-          try {
-            console.log('[useImport] Converting blob URL to base64 for', asset.name);
-            const response = await fetch(uri);
-            console.log('[useImport] Fetch response status:', response.status, 'ok:', response.ok);
-            const blob = await response.blob();
-            console.log('[useImport] Blob fetched successfully, size:', blob.size, 'type:', blob.type);
-            
-            const reader = new FileReader();
-            console.log('[useImport] FileReader created, starting readAsDataURL');
-            
-            uri = await new Promise<string>((resolve, reject) => {
-              const timeout = setTimeout(() => {
-                console.error('[useImport] FileReader timeout after 30s');
-                reject(new Error('FileReader timeout'));
-              }, 30000);
+        try {
+          let blob: Blob | null = null;
 
-              reader.onload = () => {
-                clearTimeout(timeout);
-                const result = reader.result as string;
-                console.log('[useImport] FileReader onload fired, result length:', result.length);
-                resolve(result);
-              };
-              reader.onerror = () => {
-                clearTimeout(timeout);
-                console.error('[useImport] FileReader onerror:', reader.error);
-                reject(reader.error);
-              };
-              reader.onabort = () => {
-                clearTimeout(timeout);
-                console.error('[useImport] FileReader onabort');
-                reject(new Error('FileReader aborted'));
-              };
-              
-              console.log('[useImport] Starting FileReader.readAsDataURL');
-              reader.readAsDataURL(blob);
-            });
-            console.log('[useImport] Promise resolved, uri length:', uri.length);
-          } catch (error) {
-            console.error('[useImport] Failed to convert blob to base64:', error);
-            console.error('[useImport] Error stack:', error instanceof Error ? error.stack : 'no stack');
-            return null;
+          // Convert URI to blob
+          if (asset.uri.startsWith('blob:')) {
+            const response = await fetch(asset.uri);
+            blob = await response.blob();
+          } else if (asset.uri.startsWith('data:')) {
+            // Data URI - convert to blob
+            const arr = asset.uri.split(',');
+            const bstr = atob(arr[1]);
+            const n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            for (let i = 0; i < n; i++) {
+              u8arr[i] = bstr.charCodeAt(i);
+            }
+            blob = new Blob([u8arr], { type: 'application/epub+zip' });
+          } else {
+            // Already a file path - store directly
+            return {
+              name: 'IMPORT_EPUB' as const,
+              data: {
+                filename: asset.name,
+                uri: asset.uri,
+              },
+            };
           }
-        }
 
-        return {
-          name: 'IMPORT_EPUB' as const,
-          data: {
-            filename: asset.name,
-            uri,
-          },
-        };
+          if (!blob) {
+            throw new Error('Failed to create blob from asset');
+          }
+
+          console.log('[useImport] Blob created, size:', blob.size, 'caching in IndexedDB');
+
+          // Cache the blob in IndexedDB instead of writing to file system
+          // This avoids storing huge URIs in MMKV
+          const cacheKey = await cacheFile(blob, asset.name);
+          console.log('[useImport] File cached with key:', cacheKey);
+
+          return {
+            name: 'IMPORT_EPUB' as const,
+            data: {
+              filename: asset.name,
+              uri: cacheKey, // Store only the cache key, not the file data
+            },
+          };
+        } catch (error) {
+          console.error('[useImport] Failed to process asset:', asset.name, error);
+          return null;
+        }
       })
     ).then((tasks) => {
       console.log('[useImport] Promise.all completed, tasks count:', tasks.length);
       const validTasks = tasks.filter(Boolean) as any;
-      console.log('[useImport] Adding', validTasks.length, 'tasks to queue');
-      ServiceManager.manager.addTask(validTasks);
-      console.log('[useImport] Tasks added successfully');
+      
+      // Sanitize tasks to ensure they're serializable
+      const sanitizedTasks = validTasks.map((task: any) => ({
+        name: task.name,
+        data: {
+          filename: String(task.data.filename),
+          uri: String(task.data.uri),
+        },
+      }));
+      
+      console.log('[useImport] Adding', sanitizedTasks.length, 'tasks to queue');
+      try {
+        ServiceManager.manager.addTask(sanitizedTasks);
+        console.log('[useImport] Tasks added successfully');
+      } catch (error) {
+        console.error('[useImport] Failed to add tasks to queue:', error);
+        // Alert user with more details
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        alert(`Failed to add import tasks: ${errorMsg}`);
+      }
     }).catch((error) => {
       console.error('[useImport] Promise.all rejected:', error);
       console.error('[useImport] Error details:', error instanceof Error ? error.message : 'unknown error');
     });
   }, []);
+
   const resumeImport = () => ServiceManager.manager.resume();
 
   const pauseImport = () => ServiceManager.manager.pause();

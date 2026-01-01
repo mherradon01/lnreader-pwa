@@ -72,6 +72,7 @@ module.exports = (env, argv) => {
         'react-native-reanimated/scripts/validate-worklets-version': path.resolve(__dirname, 'shims/reanimated-validate-worklets-version.web.js'),
         'expo-sqlite': path.resolve(__dirname, 'shims/expo-sqlite.web.ts'),
         'expo-notifications': path.resolve(__dirname, 'shims/expo-notifications.web.ts'),
+        'react-native-webview$': path.resolve(__dirname, 'shims/react-native-webview.web.js'),
         '@components': path.resolve(__dirname, 'src/components'),
         '@database': path.resolve(__dirname, 'src/database'),
         '@hooks': path.resolve(__dirname, 'src/hooks'),

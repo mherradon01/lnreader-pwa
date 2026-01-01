@@ -33,5 +33,13 @@ export function getMMKVObject<T>(key: string) {
 }
 
 export function setMMKVObject<T>(key: string, obj: T) {
-  getMMKVInstance().set(key, JSON.stringify(obj));
+  try {
+    const serialized = JSON.stringify(obj);
+    getMMKVInstance().set(key, serialized);
+  } catch (error) {
+    console.error(`[MMKV] Failed to serialize object for key "${key}":`, error);
+    // Log the object structure to help debug
+    console.error('[MMKV] Object keys:', Object.keys(obj as any));
+    throw new Error(`Failed to serialize data for ${key}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }

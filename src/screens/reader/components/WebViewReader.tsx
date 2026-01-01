@@ -3,6 +3,7 @@ import {
   AppState,
   NativeEventEmitter,
   NativeModules,
+  Platform,
   StatusBar,
 } from 'react-native';
 import WebView from 'react-native-webview';
@@ -24,6 +25,7 @@ import {
 import { getBatteryLevelSync } from 'react-native-device-info';
 import * as Speech from 'expo-speech';
 import { PLUGIN_STORAGE } from '@utils/Storages';
+import { processHtmlForWeb } from '@utils/processHtmlForWeb';
 import { useChapterContext } from '../ChapterContext';
 import {
   showTTSNotification,
@@ -58,7 +60,7 @@ const { RNDeviceInfo } = NativeModules;
 const deviceInfoEmitter = new NativeEventEmitter(RNDeviceInfo);
 
 const assetsUriPrefix = __DEV__
-  ? 'http://localhost:8081/assets'
+  ? (Platform.OS === 'web' ? '/assets' : 'http://localhost:8081/assets')
   : 'file:///android_asset';
 
 const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
@@ -79,6 +81,8 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
       getMMKVObject<ChapterReaderSettings>(CHAPTER_READER_SETTINGS) ||
       initialChapterReaderSettings,
   );
+  const [processedHtml, setProcessedHtml] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(true);
   const chapterGeneralSettings = useMemo(
     () =>
       getMMKVObject<ChapterGeneralSettings>(CHAPTER_GENERAL_SETTINGS) ||
@@ -99,8 +103,8 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
   // Update battery level when chapter changes to ensure fresh value on navigation
   const batteryLevel = useMemo(() => getBatteryLevelSync(), [chapter.id]);
   const plugin = getPlugin(novel?.pluginId);
-  const pluginCustomJS = `file://${PLUGIN_STORAGE}/${plugin?.id}/custom.js`;
-  const pluginCustomCSS = `file://${PLUGIN_STORAGE}/${plugin?.id}/custom.css`;
+  const pluginCustomJS = plugin?.id ? `file://${PLUGIN_STORAGE}/${plugin.id}/custom.js` : '';
+  const pluginCustomCSS = plugin?.id ? `file://${PLUGIN_STORAGE}/${plugin.id}/custom.css` : '';
   const nextChapterScreenVisible = useRef<boolean>(false);
   const autoStartTTSRef = useRef<boolean>(false);
   const isTTSReadingRef = useRef<boolean>(false);
@@ -225,6 +229,24 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
       mmkvListener.remove();
     };
   }, [webViewRef]);
+
+  // Process HTML to convert file:// URLs to blob URLs on web
+  useEffect(() => {
+    const processHtml = async () => {
+      setIsProcessing(true);
+      try {
+        const processed = await processHtmlForWeb(html || '');
+        setProcessedHtml(processed);
+      } catch (error) {
+        console.error('[WebViewReader] Failed to process HTML:', error);
+        setProcessedHtml(html || '');
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+
+    processHtml();
+  }, [html, chapter.id]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextState => {
@@ -458,7 +480,7 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
                 }
                 </style>
 
-              <link rel="stylesheet" href="${pluginCustomCSS}">
+              ${pluginCustomCSS ? `<link rel="stylesheet" href="${pluginCustomCSS}">` : ''}
               <style>${readerSettings.customCSS}</style>
             </head>
             <body class="${
@@ -472,7 +494,7 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
               ${chapterGeneralSettings.pageReader ? '' : 'display: none'}"
               ">${chapter.name}</div>
               <div id="LNReader-chapter">
-                ${html}  
+                ${processedHtml ?? html}  
               </div>
               <div id="reader-ui"></div>
               </body>
@@ -509,7 +531,7 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
               <script src="${assetsUriPrefix}/js/text-vibe.js"></script>
               <script src="${assetsUriPrefix}/js/core.js"></script>
               <script src="${assetsUriPrefix}/js/index.js"></script>
-              <script src="${pluginCustomJS}"></script>
+              ${pluginCustomJS ? `<script src="${pluginCustomJS}"></script>` : ''}
               <script>
                 ${readerSettings.customJS}
               </script>

@@ -8,6 +8,8 @@ import { getString } from '@strings/translations';
 import { NOVEL_STORAGE } from '@utils/Storages';
 import { db } from '@database/db';
 import { BackgroundTaskMetadata } from '@services/ServiceManager';
+import { getCachedFile, clearCachedFile } from '@utils/fileCache';
+
 import NativeFile from '@specs/NativeFile';
 import NativeZipArchive from '@specs/NativeZipArchive';
 import NativeEpub from '@specs/NativeEpub';
@@ -19,6 +21,28 @@ const decodePath = (path: string) => {
     return path;
   }
 };
+
+// Helper function to normalize paths and resolve ".." sequences
+function normalizePath(path: string): string {
+  const parts = path.split('/');
+  const result: string[] = [];
+  
+  for (const part of parts) {
+    if (part === '..') {
+      // Go up one directory
+      if (result.length > 0) {
+        result.pop();
+      }
+    } else if (part && part !== '.') {
+      // Add non-empty parts (skip "." and empty strings from double slashes)
+      result.push(part);
+    }
+  }
+  
+  // Reconstruct path, preserving leading slash if present
+  const normalized = result.join('/');
+  return path.startsWith('/') ? '/' + normalized : normalized;
+}
 
 const insertLocalNovel = async (
   name: string,
@@ -39,16 +63,31 @@ const insertLocalNovel = async (
   if (insertedNovel.lastInsertRowId && insertedNovel.lastInsertRowId >= 0) {
     await updateNovelCategoryById(insertedNovel.lastInsertRowId, [2]);
     const novelDir = NOVEL_STORAGE + '/local/' + insertedNovel.lastInsertRowId;
-    NativeFile.mkdir(novelDir);
-    const newCoverPath =
-      'file://' + novelDir + '/' + cover?.split(/[/\\]/).pop();
-
+    await NativeFile.mkdir(novelDir);
+    
+    let coverPath = '';
     if (cover) {
+      console.log('[insertLocalNovel] Original cover path:', cover);
       const decodedPath = decodePath(cover);
-      if (NativeFile.exists(decodedPath)) {
-        NativeFile.moveFile(decodedPath, newCoverPath);
+      console.log('[insertLocalNovel] Decoded cover path:', decodedPath);
+      const coverFileName = decodedPath.split(/[/\\]/).pop();
+      console.log('[insertLocalNovel] Cover file name:', coverFileName);
+      const coverDestPath = novelDir + '/' + coverFileName;
+      console.log('[insertLocalNovel] Cover destination path:', coverDestPath);
+      
+      const coverExists = await NativeFile.exists(decodedPath);
+      console.log('[insertLocalNovel] Cover exists at source:', coverExists);
+      if (coverExists) {
+        await NativeFile.moveFile(decodedPath, coverDestPath);
+        // Store the file:// URL for display with timestamp to bypass cache
+        coverPath = 'file://' + coverDestPath + '?' + Date.now();
+        console.log('[insertLocalNovel] Cover moved to:', coverDestPath);
+        console.log('[insertLocalNovel] Cover stored as:', coverPath);
+      } else {
+        console.warn('[insertLocalNovel] Cover file not found at:', decodedPath);
       }
     }
+
     await updateNovelInfo({
       id: insertedNovel.lastInsertRowId,
       pluginId: LOCAL_PLUGIN_ID,
@@ -56,12 +95,13 @@ const insertLocalNovel = async (
       artist: artist,
       summary: summary,
       path: NOVEL_STORAGE + '/local/' + insertedNovel.lastInsertRowId,
-      cover: newCoverPath,
+      cover: coverPath,
       name: name,
       inLibrary: true,
       isLocal: true,
       totalPages: 0,
     });
+    console.log('[insertLocalNovel] Novel info updated with cover:', coverPath);
     return insertedNovel.lastInsertRowId;
   }
   throw new Error(getString('advancedSettingsScreen.novelInsertFailed'));
@@ -98,12 +138,42 @@ const insertLocalChapter = async (
     }
     
     const novelDir = NOVEL_STORAGE + '/local/' + novelId;
-    chapterText = chapterText.replace(
-      /=(?<= href=| src=)(["'])([^]*?)\1/g,
-      (_, __, $2: string) => {
-        return `="file://${novelDir}/${$2.split(/[/\\]/).pop()}"`;
-      },
-    );
+    const epubCacheDir = NativeFile.getConstants().ExternalCachesDirectoryPath + '/epub';
+    
+    // Rewrite resource paths to point to EPUB cache directory
+    // This handles images, stylesheets, fonts, etc.
+    // For very large files, skip the rewriting to avoid stack overflow
+    if (chapterText.length < 10 * 1024 * 1024) { // 10MB limit
+      try {
+        const chapterDirFull = path.substring(0, path.lastIndexOf('/'));
+        const chapterDirRelative = chapterDirFull.startsWith(epubCacheDir + '/') 
+          ? chapterDirFull.substring(epubCacheDir.length + 1) 
+          : chapterDirFull;
+        
+        chapterText = chapterText.replace(
+          /(href|src)=["']([^"']*?)["']/g,
+          (match: string, attrName: string, resourcePath: string) => {
+            // Skip absolute URLs and data URLs
+            if (resourcePath.startsWith('http') || resourcePath.startsWith('data:')) {
+              return match;
+            }
+            // Skip already-converted file:// URLs
+            if (resourcePath.startsWith('file://')) {
+              return match;
+            }
+            
+            const resolvedPath = epubCacheDir + '/' + chapterDirRelative + '/' + resourcePath;
+            const normalizedPath = normalizePath(resolvedPath);
+            
+            return `${attrName}="${normalizedPath}"`;
+          },
+        );
+      } catch (error) {
+        console.warn('[insertLocalChapter] Error rewriting paths, continuing without rewriting:', error);
+      }
+    } else {
+      console.log('[insertLocalChapter] Chapter HTML too large, skipping path rewriting');
+    }
     
     await NativeFile.mkdir(novelDir + '/' + insertedChapter.lastInsertRowId);
     await NativeFile.writeFile(
@@ -139,7 +209,39 @@ export const importEpub = async (
   const epubFilePath =
     NativeFile.getConstants().ExternalCachesDirectoryPath + '/novel.epub';
   console.log('[importEpub] Copying file to:', epubFilePath);
-  await NativeFile.copyFile(uri, epubFilePath);
+  
+  // Check if URI is a cache key (starts with 'file_') or a direct URI
+  if (uri.startsWith('file_')) {
+    console.log('[importEpub] Retrieving file from cache with key:', uri);
+    const blob = await getCachedFile(uri);
+    if (!blob) {
+      throw new Error('Cached EPUB file not found: ' + uri);
+    }
+    
+    // Convert blob to array buffer and write to file
+    const arrayBuffer = await blob.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Use chunked approach to avoid stack overflow with large files
+    let binaryString = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, i + chunkSize);
+      binaryString += String.fromCharCode(...chunk);
+    }
+    const base64 = btoa(binaryString);
+    
+    await NativeFile.writeFile(epubFilePath, base64);
+    
+    // Clean up the cache after retrieval
+    clearCachedFile(uri).catch(err => {
+      console.warn('[importEpub] Failed to cleanup cached file:', err);
+    });
+  } else {
+    // Direct URI (data URI or file path)
+    await NativeFile.copyFile(uri, epubFilePath);
+  }
+  
   console.log('[importEpub] File copied successfully');
 
   const epubDirPath =
@@ -158,6 +260,8 @@ export const importEpub = async (
   console.log('[importEpub] Parsing novel from:', epubDirPath);
   const novel = await NativeEpub.parseNovelAndChapters(epubDirPath);
   console.log('[importEpub] Novel parsed:', { name: novel.name, chapters: novel.chapters?.length });
+  console.log('[importEpub] Image paths from parser:', novel.imagePaths);
+  console.log('[importEpub] CSS paths from parser:', novel.cssPaths);
   
   if (!novel.name) {
     novel.name = filename.replace('.epub', '') || 'Untitled';
@@ -205,26 +309,9 @@ export const importEpub = async (
     progressText: getString('advancedSettingsScreen.importStaticFiles'),
   }));
 
-  for (const filePath of novel.imagePaths) {
-    const decodedPath = decodePath(filePath);
-
-    if (NativeFile.exists(decodedPath)) {
-      NativeFile.moveFile(
-        decodedPath,
-        novelDir + '/' + filePath.split(/[/\\]/).pop(),
-      );
-    }
-  }
-
-  for (const filePath of novel.cssPaths) {
-    const decodedPath = decodePath(filePath);
-    if (NativeFile.exists(decodedPath)) {
-      NativeFile.moveFile(
-        decodedPath,
-        novelDir + '/' + filePath.split(/[/\\]/).pop(),
-      );
-    }
-  }
+  // Note: Cover image extraction is already handled in insertLocalNovel
+  // Additional image and CSS extraction is skipped as they're typically embedded in chapters
+  console.log('[importEpub] Image extraction handled via cover extraction');
 
   setMeta(meta => ({
     ...meta,

@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -121,7 +121,11 @@ function NovelCover<
 
   const selectNovel = () => onLongPress(item);
 
-  const uri = getWebSafeCoverUri(item.cover);
+  const [uri, setUri] = useState<string>(defaultCover);
+
+  useEffect(() => {
+    getWebSafeCoverUri(item.cover).then(setUri);
+  }, [item.cover]);
 
   const requestInit = imageRequestInit || ({} as ImageRequestInit);
   if (!requestInit.headers) {

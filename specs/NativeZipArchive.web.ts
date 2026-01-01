@@ -49,12 +49,26 @@ const NativeZipArchive = {
         } else {
           fileCount++;
           // Extract file
-          filePromises.push(
-            file.async('string').then((content) => {
-              console.log('[NativeZipArchive.unzip] Extracting file:', relativePath, 'size:', content.length);
-              return NativeFile.writeFile(filePath, content);
-            })
-          );
+          // Check if it's likely a binary file (image, pdf, etc.)
+          const isBinary = /\.(jpg|jpeg|png|gif|webp|pdf|zip|epub|ttf|woff|woff2|eot)$/i.test(relativePath);
+          
+          if (isBinary) {
+            // For binary files, extract as base64
+            filePromises.push(
+              file.async('base64').then((content) => {
+                console.log('[NativeZipArchive.unzip] Extracting binary file:', relativePath, 'size:', content.length);
+                return NativeFile.writeFile(filePath, content);
+              })
+            );
+          } else {
+            // For text files, extract as string
+            filePromises.push(
+              file.async('string').then((content) => {
+                console.log('[NativeZipArchive.unzip] Extracting text file:', relativePath, 'size:', content.length);
+                return NativeFile.writeFile(filePath, content);
+              })
+            );
+          }
         }
       });
 
@@ -94,12 +108,24 @@ const NativeZipArchive = {
           // Create directory
           filePromises.push(NativeFile.mkdir(filePath).catch(() => {}));
         } else {
-          // Extract file
-          filePromises.push(
-            file.async('string').then((content) => {
-              return NativeFile.writeFile(filePath, content);
-            })
-          );
+          // Extract file - check if it's likely a binary file
+          const isBinary = /\.(jpg|jpeg|png|gif|webp|pdf|zip|epub|ttf|woff|woff2|eot)$/i.test(relativePath);
+          
+          if (isBinary) {
+            // For binary files, extract as base64
+            filePromises.push(
+              file.async('base64').then((content) => {
+                return NativeFile.writeFile(filePath, content);
+              })
+            );
+          } else {
+            // For text files, extract as string
+            filePromises.push(
+              file.async('string').then((content) => {
+                return NativeFile.writeFile(filePath, content);
+              })
+            );
+          }
         }
       });
 

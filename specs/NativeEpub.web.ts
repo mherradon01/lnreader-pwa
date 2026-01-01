@@ -85,11 +85,10 @@ const NativeEpub = {
           if (coverManifestEl) {
             const coverHref = coverManifestEl.getAttribute('href');
             if (coverHref) {
-              const opfDir = opfPath.substring(0, opfPath.lastIndexOf('/'));
+              const opfDir = opfFullPath.substring(0, opfFullPath.lastIndexOf('/'));
               const coverRelativePath = opfDir + '/' + coverHref;
               // Resolve relative paths (e.g., "../" goes up one directory)
-              const coverFullPath = epubDirPath + '/' + coverRelativePath;
-              const normalizedPath = normalizePath(coverFullPath);
+              const normalizedPath = normalizePath(coverRelativePath);
               
               cover = normalizedPath;
               console.log('[NativeEpub] Found cover image:', cover);
@@ -103,14 +102,28 @@ const NativeEpub = {
       const chapters: EpubChapter[] = [];
       const spineItemRefs = opfDoc.querySelectorAll('spine itemref');
       const manifest = new Map<string, { href: string; type: string }>();
+      const imagePaths: string[] = [];
 
-      // Build manifest map
+      // Build manifest map and collect image paths
       opfDoc.querySelectorAll('manifest item').forEach((item) => {
         const id = item.getAttribute('id');
         const href = item.getAttribute('href');
         const type = item.getAttribute('media-type');
         if (id && href) {
           manifest.set(id, { href, type: type || '' });
+          
+          // Collect image files - check MIME type case-insensitively
+          const mimeTypeLower = (type || '').toLowerCase();
+          if (mimeTypeLower.startsWith('image/') || mimeTypeLower.includes('svg')) {
+            const opfDir = opfFullPath.substring(0, opfFullPath.lastIndexOf('/'));
+            const imageRelativePath = opfDir + '/' + href;
+            const normalizedPath = normalizePath(imageRelativePath);
+            imagePaths.push(normalizedPath);
+            console.log('[NativeEpub] Found image:', normalizedPath, 'type:', type);
+          } else if (id && href) {
+            // Log non-image items for debugging
+            console.log('[NativeEpub] Manifest item:', id, 'href:', href, 'type:', type);
+          }
         }
       });
 
@@ -120,11 +133,10 @@ const NativeEpub = {
         if (idref) {
           const manifestEntry = manifest.get(idref);
           if (manifestEntry) {
-            const opfDir = opfPath.substring(0, opfPath.lastIndexOf('/'));
+            const opfDir = opfFullPath.substring(0, opfFullPath.lastIndexOf('/'));
             const chapterRelativePath = opfDir + '/' + manifestEntry.href;
             // Resolve relative paths (e.g., "../" goes up one directory)
-            const chapterFullPath = epubDirPath + '/' + chapterRelativePath;
-            const normalizedPath = normalizePath(chapterFullPath);
+            const normalizedPath = normalizePath(chapterRelativePath);
             
             chapters.push({
               name: `Chapter ${chapters.length + 1}`,
@@ -135,6 +147,8 @@ const NativeEpub = {
       });
 
       console.log('[NativeEpub] Found', chapters.length, 'chapters');
+      console.log('[NativeEpub] Found', imagePaths.length, 'images');
+      console.log('[NativeEpub] Image paths:', imagePaths);
 
       const result: EpubNovel = {
         name,
@@ -144,7 +158,7 @@ const NativeEpub = {
         artist: null,
         chapters: chapters.length > 0 ? chapters : [],
         cssPaths: [],
-        imagePaths: [],
+        imagePaths,
       };
 
       console.log('[NativeEpub] Parsing complete:', {
