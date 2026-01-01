@@ -17,7 +17,7 @@ const SettingsScreen = ({ navigation }: SettingsScreenProps) => {
         handleGoBack={navigation.goBack}
         theme={theme}
       />
-      <ScrollView style={[{ backgroundColor: theme.background }, styles.flex]}>
+      <ScrollView style={{ backgroundColor: theme.background }}>
         <List.Item
           title={getString('generalSettings')}
           icon="tune"
@@ -95,6 +95,4 @@ const SettingsScreen = ({ navigation }: SettingsScreenProps) => {
 
 export default SettingsScreen;
 
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-});
+const styles = StyleSheet.create({});

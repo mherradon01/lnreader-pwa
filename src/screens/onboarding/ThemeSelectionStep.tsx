@@ -62,13 +62,16 @@ const AmoledToggle: React.FC<AmoledToggleProps> = ({ theme }) => {
 export default function ThemeSelectionStep() {
   const theme = useTheme();
   const [themeMode = 'system', setThemeMode] = useMMKVString('THEME_MODE');
-  const [, setThemeId] = useMMKVNumber('APP_THEME_ID');
+  const [themeId, setThemeId] = useMMKVNumber('APP_THEME_ID');
 
   const currentMode = themeMode as ThemeMode;
 
   const availableThemes = useMemo(() => {
-    return theme.isDark ? darkThemes : lightThemes;
-  }, [theme.isDark]);
+    if (currentMode === 'system') {
+      return theme.isDark ? darkThemes : lightThemes;
+    }
+    return currentMode === 'dark' ? darkThemes : lightThemes;
+  }, [currentMode, theme.isDark]);
 
   const themeModeOptions: SegmentedControlOption<ThemeMode>[] = useMemo(
     () => [
@@ -93,7 +96,7 @@ export default function ThemeSelectionStep() {
 
     if (mode !== 'system') {
       const themes = mode === 'dark' ? darkThemes : lightThemes;
-      const currentThemeInMode = themes.find(t => t.id === theme.id);
+      const currentThemeInMode = themes.find(t => t.id === themeId);
 
       if (!currentThemeInMode) {
         setThemeId(themes[0].id);
@@ -105,6 +108,14 @@ export default function ThemeSelectionStep() {
     setThemeId(selectedTheme.id);
     setThemeMode(selectedTheme.isDark ? 'dark' : 'light');
   };
+
+  const currentTheme = useMemo(() => {
+    if (themeId !== undefined) {
+      const allThemes = [...lightThemes, ...darkThemes];
+      return allThemes.find(t => t.id === themeId) || theme;
+    }
+    return theme;
+  }, [themeId, theme]);
 
   return (
     <View style={styles.container}>
@@ -127,7 +138,7 @@ export default function ThemeSelectionStep() {
         {availableThemes.map(item => (
           <View key={item.id} style={styles.themeItem}>
             <ThemePicker
-              currentTheme={theme}
+              currentTheme={currentTheme}
               theme={item}
               onPress={() => handleThemeSelect(item)}
             />
