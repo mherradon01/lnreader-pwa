@@ -39,6 +39,17 @@ const TabBar = ({
   ...rest
 }) => {
   const { routes, index } = navigationState;
+  const [tabMeasurements, setTabMeasurements] = useState({});
+
+  const handleTabLayout = useCallback((i, event) => {
+    const { x, width } = event.nativeEvent.layout;
+    setTabMeasurements((prev) => ({
+      ...prev,
+      [i]: { x, width },
+    }));
+  }, []);
+
+  const activeTabMeasurement = tabMeasurements[index];
 
   return (
     <View style={[styles.tabBar, style]}>
@@ -75,6 +86,7 @@ const TabBar = ({
               onPress={handlePress}
               onLongPress={() => onTabLongPress?.({ route })}
               testID={testID ? `${testID}-tab-${route.key}` : undefined}
+              onLayout={(e) => handleTabLayout(i, e)}
             >
               {renderIcon?.({ route, focused, color })}
               {renderLabel ? (
@@ -94,10 +106,15 @@ const TabBar = ({
         style={[
           styles.indicator,
           indicatorStyle,
-          {
-            width: `${100 / routes.length}%`,
-            left: `${(100 / routes.length) * index}%`,
-          },
+          activeTabMeasurement
+            ? {
+                width: activeTabMeasurement.width,
+                left: activeTabMeasurement.x,
+              }
+            : {
+                width: 0,
+                left: 0,
+              },
         ]}
       />
     </View>
@@ -244,11 +261,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: 2,
     backgroundColor: '#2196F3',
+    transition: 'all 150ms ease-out',
   },
   pager: {
     flex: 1,
   },
-  scene: {
+  scene: {  
     flex: 1,
     overflow: 'hidden',
   },
