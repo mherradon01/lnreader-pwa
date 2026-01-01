@@ -85,10 +85,18 @@ const insertLocalChapter = async (
   );
   if (insertedChapter.lastInsertRowId && insertedChapter.lastInsertRowId >= 0) {
     let chapterText: string = '';
-    chapterText = NativeFile.readFile(decodePath(path));
-    if (!chapterText) {
+    try {
+      chapterText = await NativeFile.readFile(decodePath(path));
+    } catch (error) {
+      console.warn('[insertLocalChapter] Could not read chapter file:', path, error);
       return [];
     }
+    
+    if (!chapterText) {
+      console.warn('[insertLocalChapter] Chapter text is empty:', path);
+      return [];
+    }
+    
     const novelDir = NOVEL_STORAGE + '/local/' + novelId;
     chapterText = chapterText.replace(
       /=(?<= href=| src=)(["'])([^]*?)\1/g,
@@ -96,11 +104,13 @@ const insertLocalChapter = async (
         return `="file://${novelDir}/${$2.split(/[/\\]/).pop()}"`;
       },
     );
-    NativeFile.mkdir(novelDir + '/' + insertedChapter.lastInsertRowId);
-    NativeFile.writeFile(
+    
+    await NativeFile.mkdir(novelDir + '/' + insertedChapter.lastInsertRowId);
+    await NativeFile.writeFile(
       novelDir + '/' + insertedChapter.lastInsertRowId + '/index.html',
       chapterText,
     );
+    console.log('[insertLocalChapter] Chapter stored:', insertedChapter.lastInsertRowId);
     return;
   }
   throw new Error(getString('advancedSettingsScreen.chapterInsertFailed'));
@@ -124,20 +134,35 @@ export const importEpub = async (
     progress: 0,
   }));
 
+  console.log('[importEpub] Starting EPUB import for:', filename);
+
   const epubFilePath =
     NativeFile.getConstants().ExternalCachesDirectoryPath + '/novel.epub';
-  NativeFile.copyFile(uri, epubFilePath);
+  console.log('[importEpub] Copying file to:', epubFilePath);
+  await NativeFile.copyFile(uri, epubFilePath);
+  console.log('[importEpub] File copied successfully');
+
   const epubDirPath =
     NativeFile.getConstants().ExternalCachesDirectoryPath + '/epub';
-  if (NativeFile.exists(epubDirPath)) {
-    NativeFile.unlink(epubDirPath);
+  console.log('[importEpub] Checking if epub dir exists:', epubDirPath);
+  if (await NativeFile.exists(epubDirPath)) {
+    console.log('[importEpub] Removing existing epub dir');
+    await NativeFile.unlink(epubDirPath);
   }
-  NativeFile.mkdir(epubDirPath);
+  console.log('[importEpub] Creating epub dir');
+  await NativeFile.mkdir(epubDirPath);
+  console.log('[importEpub] Unzipping EPUB file');
   await NativeZipArchive.unzip(epubFilePath, epubDirPath);
-  const novel = NativeEpub.parseNovelAndChapters(epubDirPath);
+  console.log('[importEpub] EPUB unzipped successfully');
+
+  console.log('[importEpub] Parsing novel from:', epubDirPath);
+  const novel = await NativeEpub.parseNovelAndChapters(epubDirPath);
+  console.log('[importEpub] Novel parsed:', { name: novel.name, chapters: novel.chapters?.length });
+  
   if (!novel.name) {
     novel.name = filename.replace('.epub', '') || 'Untitled';
   }
+  
   const novelId = await insertLocalNovel(
     novel.name,
     epubDirPath + novel.name, // temporary
@@ -147,9 +172,12 @@ export const importEpub = async (
     novel.summary || '',
   );
   const now = dayjs().toISOString();
-  if (novel.chapters) {
-    for (let i = 0; i < novel.chapters?.length; i++) {
+  console.log('[importEpub] Processing', novel.chapters?.length || 0, 'chapters');
+  
+  if (novel.chapters && Array.isArray(novel.chapters)) {
+    for (let i = 0; i < novel.chapters.length; i++) {
       const chapter = novel.chapters[i];
+      console.log('[importEpub] Processing chapter', i, ':', chapter.name);
       if (!chapter.name) {
         chapter.name = chapter.path.split(/[/\\]/).pop() || 'unknown';
       }
@@ -166,7 +194,10 @@ export const importEpub = async (
         progress: i / novel.chapters.length,
       }));
     }
+  } else {
+    console.warn('[importEpub] No chapters found or chapters is not an array');
   }
+  
   const novelDir = NOVEL_STORAGE + '/local/' + novelId;
 
   setMeta(meta => ({

@@ -28,6 +28,13 @@ const initDB = (): Promise<IDBDatabase> => {
   });
 };
 
+interface FileEntry {
+  path: string;
+  content: string;
+  isDirectory: boolean;
+  isBase64?: boolean;
+}
+
 interface ReadDirResult {
   name: string;
   path: string;
@@ -56,7 +63,11 @@ const NativeFile = {
 
       request.onsuccess = () => {
         if (request.result) {
-          resolve(request.result.content);
+          const entry = request.result as FileEntry;
+          // Return the content as-is
+          // If it was stored as base64, it's still base64
+          // The caller will handle decoding if needed
+          resolve(entry.content);
         } else {
           reject(new Error(`File not found: ${path}`));
         }
@@ -66,8 +77,78 @@ const NativeFile = {
   },
 
   copyFile: async (sourcePath: string, destPath: string): Promise<void> => {
-    const content = await NativeFile.readFile(sourcePath);
-    await NativeFile.writeFile(destPath, content);
+    console.log('[NativeFile.copyFile] Starting copy from:', sourcePath.substring(0, 50), 'to:', destPath);
+    let content: string;
+    let isBase64 = false;
+
+    // Handle data URIs (base64 encoded)
+    if (sourcePath.startsWith('data:')) {
+      try {
+        console.log('[NativeFile.copyFile] Processing data URI');
+        // Extract base64 data from data URI
+        const parts = sourcePath.split(',');
+        if (parts.length === 2) {
+          content = parts[1];
+          isBase64 = true;
+          console.log('[NativeFile.copyFile] Extracted base64, length:', content.length);
+        } else {
+          throw new Error('Invalid data URI format');
+        }
+      } catch (error) {
+        console.error('[NativeFile.copyFile] Error parsing data URI:', error);
+        throw new Error(`Failed to parse data URI: ${sourcePath}`);
+      }
+    }
+    // Handle blob URLs (from file uploads)
+    else if (sourcePath.startsWith('blob:')) {
+      try {
+        console.log('[NativeFile.copyFile] Fetching blob URL');
+        const response = await fetch(sourcePath);
+        const blob = await response.blob();
+        console.log('[NativeFile.copyFile] Blob fetched, size:', blob.size);
+        
+        // For binary files (like EPUB), use base64 encoding
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          reader.onload = () => {
+            const result = reader.result as string;
+            // Extract base64 data (remove data URI prefix)
+            const base64 = result.split(',')[1];
+            console.log('[NativeFile.copyFile] Blob converted to base64, length:', base64.length);
+            resolve(base64);
+          };
+          reader.onerror = () => reject(reader.error);
+        });
+
+        content = await base64Promise;
+        isBase64 = true;
+      } catch (error) {
+        console.error('[NativeFile.copyFile] Error reading blob:', error);
+        throw new Error(`Failed to read blob: ${sourcePath}`);
+      }
+    } else {
+      // Handle regular file paths
+      console.log('[NativeFile.copyFile] Reading from file path');
+      content = await NativeFile.readFile(sourcePath);
+    }
+
+    // Store file with base64 flag if needed
+    console.log('[NativeFile.copyFile] Storing file in IndexedDB, size:', content.length, 'isBase64:', isBase64);
+    const database = await initDB();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction([STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.put({ path: destPath, content, isDirectory: false, isBase64 });
+
+      request.onsuccess = () => {
+        console.log('[NativeFile.copyFile] File stored successfully at:', destPath);
+        resolve();
+      };
+      request.onerror = () => {
+        console.error('[NativeFile.copyFile] Error storing file:', request.error);
+        reject(request.error);
+      };
+    });
   },
 
   moveFile: async (sourcePath: string, destPath: string): Promise<void> => {

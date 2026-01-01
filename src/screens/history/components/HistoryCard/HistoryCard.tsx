@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import { IconButtonV2 } from '@components';
 
 import { defaultCover } from '@plugins/helpers/constants';
+import { getWebSafeCoverUri } from '@utils/coverUtils';
 import { getString } from '@strings/translations';
 import { useTheme } from '@hooks/persisted';
 
@@ -60,7 +61,7 @@ const HistoryCard: React.FC<HistoryCardProps> = ({
           }
         >
           <Image
-            source={{ uri: history.novelCover || defaultCover }}
+            source={{ uri: getWebSafeCoverUri(history.novelCover) }}
             style={styles.cover}
           />
         </Pressable>

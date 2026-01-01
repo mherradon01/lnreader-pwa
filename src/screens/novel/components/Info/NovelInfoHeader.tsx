@@ -8,6 +8,7 @@ import { IconButton } from 'react-native-paper';
 import MaterialCommunityIcons from '@react-native-vector-icons/material-design-icons';
 
 import { showToast } from '@utils/showToast';
+import { getWebSafeCoverUri } from '@utils/coverUtils';
 
 import {
   CoverImage,
@@ -105,16 +106,18 @@ const NovelInfoHeader = ({
     showToast('Not available while loading');
   };
 
+  const coverUri = getWebSafeCoverUri(novel.cover);
+
   return (
     <>
       <CoverImage
-        source={{ uri: novel.cover }}
+        source={{ uri: coverUri }}
         theme={theme}
         hideBackdrop={hideBackdrop}
       >
         <NovelInfoContainer>
           <NovelThumbnail
-            source={{ uri: novel.cover }}
+            source={{ uri: coverUri }}
             theme={theme}
             setCustomNovelCover={
               isLoading ? showNotAvailable : setCustomNovelCover

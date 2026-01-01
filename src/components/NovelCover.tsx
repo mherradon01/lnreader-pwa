@@ -22,6 +22,7 @@ import { getUserAgent } from '@hooks/persisted/useUserAgent';
 import { getString } from '@strings/translations';
 import SourceScreenSkeletonLoading from '@screens/browse/loadingAnimation/SourceScreenSkeletonLoading';
 import { defaultCover } from '@plugins/helpers/constants';
+import { getWebSafeCoverUri } from '@utils/coverUtils';
 import { ActivityIndicator } from 'react-native-paper';
 
 interface UnreadBadgeProps {
@@ -120,7 +121,8 @@ function NovelCover<
 
   const selectNovel = () => onLongPress(item);
 
-  const uri = item.cover || defaultCover;
+  const uri = getWebSafeCoverUri(item.cover);
+
   const requestInit = imageRequestInit || ({} as ImageRequestInit);
   if (!requestInit.headers) {
     requestInit.headers = {

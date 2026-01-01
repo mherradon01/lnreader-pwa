@@ -15,6 +15,7 @@ import { useDownload, useTheme, useUpdates } from '@hooks/persisted';
 import { RootStackParamList } from '@navigators/types';
 import { FlatList } from 'react-native-gesture-handler';
 import { defaultCover } from '@plugins/helpers/constants';
+import { getWebSafeCoverUri } from '@utils/coverUtils';
 import { ThemeColors } from '@theme/types';
 
 type UpdateCardProps = {
@@ -116,7 +117,7 @@ const UpdateNovelCard: React.FC<UpdateCardProps> = ({
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const Cover = useCallback(() => {
-    const uri = chapterListInfo.novelCover || defaultCover;
+    const uri = getWebSafeCoverUri(chapterListInfo.novelCover);
     return (
       <Pressable onPress={navigateToNovel} style={styles.alignSelf}>
         <Image source={{ uri }} style={styles.cover} />

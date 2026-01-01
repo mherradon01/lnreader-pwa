@@ -66,6 +66,10 @@ export function defineAnimation(starting, factory) {
 function createSharedValue(initialValue) {
   const sharedValue = {
     value: initialValue,
+    // set - sets the value directly
+    set: function(newValue) {
+      this.value = newValue;
+    },
     // modify - modifies the value using a callback
     modify: function(modifier) {
       'worklet';
