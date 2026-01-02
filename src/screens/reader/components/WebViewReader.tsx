@@ -27,6 +27,7 @@ import * as Speech from 'expo-speech';
 import { PLUGIN_STORAGE } from '@utils/Storages';
 import { processHtmlForWeb } from '@utils/processHtmlForWeb';
 import { useChapterContext } from '../ChapterContext';
+import NativeFile from '@specs/NativeFile';
 import {
   showTTSNotification,
   updateTTSNotification,
@@ -117,8 +118,47 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
   // Update battery level when chapter changes to ensure fresh value on navigation
   const batteryLevel = useMemo(() => getBatteryLevelSync(), [chapter.id]);
   const plugin = getPlugin(novel?.pluginId);
-  const pluginCustomJS = plugin?.id ? `file://${PLUGIN_STORAGE}/${plugin.id}/custom.js` : '';
-  const pluginCustomCSS = plugin?.id ? `file://${PLUGIN_STORAGE}/${plugin.id}/custom.css` : '';
+  
+  // State for plugin custom files content (loaded asynchronously)
+  const [pluginCustomJSContent, setPluginCustomJSContent] = useState('');
+  const [pluginCustomCSSContent, setPluginCustomCSSContent] = useState('');
+  
+  // Load plugin custom files on web platform
+  useEffect(() => {
+    const loadPluginCustomFiles = async () => {
+      if (!plugin?.id || Platform.OS !== 'web') {
+        return;
+      }
+      
+      try {
+        const customJSPath = `${PLUGIN_STORAGE}/${plugin.id}/custom.js`;
+        const customCSSPath = `${PLUGIN_STORAGE}/${plugin.id}/custom.css`;
+        
+        // Try to load custom.js
+        try {
+          const jsContent = await NativeFile.readFile(customJSPath);
+          setPluginCustomJSContent(jsContent);
+          console.log('[WebViewReader] Loaded custom.js for plugin:', plugin.id);
+        } catch (err) {
+          console.warn('[WebViewReader] custom.js not found for plugin:', plugin.id);
+        }
+        
+        // Try to load custom.css
+        try {
+          const cssContent = await NativeFile.readFile(customCSSPath);
+          setPluginCustomCSSContent(cssContent);
+          console.log('[WebViewReader] Loaded custom.css for plugin:', plugin.id);
+        } catch (err) {
+          console.warn('[WebViewReader] custom.css not found for plugin:', plugin.id);
+        }
+      } catch (err) {
+        console.warn('[WebViewReader] Error loading plugin custom files:', err);
+      }
+    };
+    
+    loadPluginCustomFiles();
+  }, [plugin?.id]);
+  
   const nextChapterScreenVisible = useRef<boolean>(false);
   const autoStartTTSRef = useRef<boolean>(false);
   const isTTSReadingRef = useRef<boolean>(false);
@@ -494,7 +534,7 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
                 }
                 </style>
 
-              ${pluginCustomCSS ? `<link rel="stylesheet" href="${pluginCustomCSS}">` : ''}
+              ${pluginCustomCSSContent ? `<style>${pluginCustomCSSContent}</style>` : ''}
               <style>${readerSettings.customCSS}</style>
             </head>
             <body class="${
@@ -544,7 +584,7 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
               <script src="${assetsUriPrefix}/js/text-vibe.js"></script>
               <script src="${assetsUriPrefix}/js/core.js"></script>
               <script src="${assetsUriPrefix}/js/index.js"></script>
-              ${pluginCustomJS ? `<script src="${pluginCustomJS}"></script>` : ''}
+              ${pluginCustomJSContent ? `<script>${pluginCustomJSContent}</script>` : ''}
               <script>
                 ${readerSettings.customJS}
               </script>

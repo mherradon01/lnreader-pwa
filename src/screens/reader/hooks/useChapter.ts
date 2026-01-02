@@ -97,15 +97,40 @@ export default function useChapter(
     async (id: number, path: string) => {
       const filePath = `${NOVEL_STORAGE}/${novel.pluginId}/${chapter.novelId}/${id}/index.html`;
       let text = '';
-      if (NativeFile.exists(filePath)) {
-        text = NativeFile.readFile(filePath);
-      } else {
-        await fetchChapter(novel.pluginId, path)
-          .then(res => {
-            text = res;
-          })
-          .catch(e => setError(e.message));
+      
+      try {
+        // Check if file exists using sync method if available, otherwise async
+        let fileExists = false;
+        if (typeof (NativeFile as any).existsSync === 'function') {
+          fileExists = (NativeFile as any).existsSync(filePath);
+        } else {
+          fileExists = await NativeFile.exists(filePath);
+        }
+        
+        if (fileExists) {
+          // On web, readFile is async, so we need to await it
+          const fileContent = NativeFile.readFile(filePath);
+          if (fileContent instanceof Promise) {
+            text = await fileContent;
+          } else {
+            text = fileContent;
+          }
+        } else {
+          // File not cached locally, fetch from plugin
+          text = await fetchChapter(novel.pluginId, path);
+        }
+      } catch (error) {
+        console.warn('[useChapter.loadChapterText] Error loading chapter from cache, fetching from plugin:', error);
+        // If cached file read fails, try fetching from plugin
+        try {
+          text = await fetchChapter(novel.pluginId, path);
+        } catch (fetchError) {
+          console.error('[useChapter.loadChapterText] Failed to fetch chapter:', fetchError);
+          setError((fetchError as Error)?.message || 'Failed to load chapter');
+          throw fetchError;
+        }
       }
+      
       return text;
     },
     [chapter.novelId, novel.pluginId],

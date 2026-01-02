@@ -187,6 +187,11 @@ const NativeFile = {
     });
   },
 
+  existsSync: (filePath: string): boolean => {
+    // For synchronous checks, use the in-memory cache
+    return fileCache.has(filePath);
+  },
+
   mkdir: async (filePath: string): Promise<void> => {
     const database = await initDB();
     return new Promise((resolve, reject) => {
