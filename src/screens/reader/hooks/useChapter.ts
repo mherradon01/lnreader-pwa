@@ -99,15 +99,16 @@ export default function useChapter(
       let text = '';
       
       try {
-        // Check if file exists using sync method if available, otherwise async
-        let fileExists = false;
-        if (typeof (NativeFile as any).existsSync === 'function') {
-          fileExists = (NativeFile as any).existsSync(filePath);
-        } else {
-          fileExists = await NativeFile.exists(filePath);
-        }
+        // Fetch fresh chapter data from DB to get current isDownloaded status
+        const freshChapter = await getDbChapter(id);
+        const isDownloaded = freshChapter?.isDownloaded ?? false;
         
-        if (fileExists) {
+        console.log('[useChapter.loadChapterText] Chapter download status from DB:', { id, isDownloaded });
+        
+        // If chapter is marked as downloaded, try to read from file storage
+        if (isDownloaded) {
+          console.log('[useChapter.loadChapterText] Chapter is downloaded, reading from file:', filePath);
+          
           // On web, readFile is async, so we need to await it
           const fileContent = NativeFile.readFile(filePath);
           if (fileContent instanceof Promise) {
@@ -115,8 +116,11 @@ export default function useChapter(
           } else {
             text = fileContent;
           }
+          
+          console.log('[useChapter.loadChapterText] Successfully loaded downloaded chapter');
         } else {
-          // File not cached locally, fetch from plugin
+          // Chapter not downloaded, fetch from plugin
+          console.log('[useChapter.loadChapterText] Chapter not downloaded, fetching from plugin');
           text = await fetchChapter(novel.pluginId, path);
         }
       } catch (error) {

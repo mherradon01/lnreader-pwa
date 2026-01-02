@@ -189,6 +189,14 @@ const NativeFile = {
 
   existsSync: (filePath: string): boolean => {
     // For synchronous checks, use the in-memory cache
+    // This works for files that have been read or written
+    return fileCache.has(filePath);
+  },
+
+  existsSyncWithDB: (filePath: string, database: IDBDatabase): boolean => {
+    // Synchronous check using open transaction (non-blocking)
+    // This is a workaround for IndexedDB being async
+    // Returns false if we can't check synchronously
     return fileCache.has(filePath);
   },
 

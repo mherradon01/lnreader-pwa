@@ -38,20 +38,14 @@ export const proxyUrl = (url: string): string => {
 
 /**
  * Fetch wrapper that automatically proxies URLs on web to bypass CORS.
- * Also adds CORS-friendly headers to handle strict-origin-when-cross-origin policies.
+ * On web, all external URLs are routed through the /cors-proxy endpoint
+ * to avoid CORS issues. On native, uses direct fetch.
  */
 export const proxyFetch = (
   url: string,
   options?: RequestInit,
 ): Promise<Response> => {
-  // Add CORS-friendly headers if not already present
-  const corsOptions: RequestInit = {
-    ...options,
-    headers: {
-      'Referrer-Policy': 'no-referrer',
-      ...((options?.headers as Record<string, string>) || {}),
-    },
-  };
-  
-  return fetch(proxyUrl(url), corsOptions);
+  // Don't add custom headers that might trigger preflight requests
+  // The proxy server will handle CORS headers properly
+  return fetch(proxyUrl(url), options);
 };

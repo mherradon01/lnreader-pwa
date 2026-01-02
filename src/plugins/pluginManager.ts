@@ -195,7 +195,14 @@ const getPlugin = (pluginId: string) => {
       // Check if we're on web and if readFileSync exists
       if (typeof (NativeFile as any).readFileSync === 'function') {
         console.log('[pluginManager.getPlugin] Using sync read for plugin:', pluginId);
-        code = (NativeFile as any).readFileSync(filePath);
+        try {
+          code = (NativeFile as any).readFileSync(filePath);
+        } catch (syncErr) {
+          console.warn('[pluginManager.getPlugin] Plugin not in memory cache, trying async read:', pluginId);
+          // Plugin file not in memory cache yet - this can happen on first access
+          // Return undefined and let it be loaded asynchronously
+          return undefined;
+        }
       } else {
         // Fallback - this will fail on native, but on web it should use readFileSync
         console.error('[pluginManager.getPlugin] readFileSync not available, plugin loading will fail:', pluginId);
@@ -213,10 +220,39 @@ const getPlugin = (pluginId: string) => {
   return plugins[pluginId];
 };
 
+const loadPlugin = async (pluginId: string) => {
+  if (pluginId === LOCAL_PLUGIN_ID) {
+    return undefined;
+  }
+
+  // Return cached plugin if available
+  if (plugins[pluginId]) {
+    console.log('[pluginManager.loadPlugin] Using cached plugin:', pluginId);
+    return plugins[pluginId];
+  }
+
+  const filePath = `${PLUGIN_STORAGE}/${pluginId}/index.js`;
+  try {
+    console.log('[pluginManager.loadPlugin] Async loading plugin:', pluginId);
+    // Use async readFile to load from IndexedDB
+    const code = await (NativeFile as any).readFile(filePath);
+    console.log('[pluginManager.loadPlugin] Successfully loaded plugin code, initializing:', pluginId);
+    
+    const plugin = initPlugin(pluginId, code);
+    plugins[pluginId] = plugin;
+    console.log('[pluginManager.loadPlugin] Plugin initialized successfully:', pluginId);
+    return plugin;
+  } catch (err) {
+    console.error('[pluginManager.loadPlugin] Failed to load plugin:', pluginId, err);
+    return undefined;
+  }
+};
+
 const LOCAL_PLUGIN_ID = 'local';
 
 export {
   getPlugin,
+  loadPlugin,
   installPlugin,
   uninstallPlugin,
   updatePlugin,

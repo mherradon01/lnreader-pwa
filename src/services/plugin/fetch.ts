@@ -1,4 +1,4 @@
-import { getPlugin, LOCAL_PLUGIN_ID } from '@plugins/pluginManager';
+import { getPlugin, loadPlugin, LOCAL_PLUGIN_ID } from '@plugins/pluginManager';
 import { isUrlAbsolute } from '@plugins/helpers/isAbsoluteUrl';
 
 export const fetchNovel = async (pluginId: string, novelPath: string) => {
@@ -7,10 +7,18 @@ export const fetchNovel = async (pluginId: string, novelPath: string) => {
     return null;
   }
 
-  const plugin = getPlugin(pluginId);
+  let plugin = getPlugin(pluginId);
+  
+  // If plugin not in cache, try async load
+  if (!plugin) {
+    console.log('[fetchNovel] Plugin not in cache, attempting async load:', pluginId);
+    plugin = await loadPlugin(pluginId);
+  }
+  
   if (!plugin) {
     throw new Error(`Unknown plugin: ${pluginId}`);
   }
+  
   const res = await plugin.parseNovel(novelPath);
   return res;
 };
@@ -22,7 +30,14 @@ export const fetchChapter = async (pluginId: string, chapterPath: string) => {
     return '';
   }
 
-  const plugin = getPlugin(pluginId);
+  let plugin = getPlugin(pluginId);
+  
+  // If plugin not in cache, try async load
+  if (!plugin) {
+    console.log('[fetchChapter] Plugin not in cache, attempting async load:', pluginId);
+    plugin = await loadPlugin(pluginId);
+  }
+  
   let chapterText = `Unknown plugin: ${pluginId}`;
   if (plugin) {
     chapterText = await plugin.parseChapter(chapterPath);
@@ -36,10 +51,18 @@ export const fetchChapters = async (pluginId: string, novelPath: string) => {
     return [];
   }
 
-  const plugin = getPlugin(pluginId);
+  let plugin = getPlugin(pluginId);
+  
+  // If plugin not in cache, try async load
+  if (!plugin) {
+    console.log('[fetchChapters] Plugin not in cache, attempting async load:', pluginId);
+    plugin = await loadPlugin(pluginId);
+  }
+  
   if (!plugin) {
     throw new Error(`Unknown plugin: ${pluginId}`);
   }
+  
   const res = await plugin.parseNovel(novelPath);
   return res?.chapters;
 };
@@ -54,7 +77,13 @@ export const fetchPage = async (
     return { chapters: [] };
   }
 
-  const plugin = getPlugin(pluginId);
+  let plugin = getPlugin(pluginId);
+  
+  // If plugin not in cache, try async load
+  if (!plugin) {
+    console.log('[fetchPage] Plugin not in cache, attempting async load:', pluginId);
+    plugin = await loadPlugin(pluginId);
+  }
 
   if (!plugin) {
     throw new Error(`Unknown plugin: ${pluginId}`);
