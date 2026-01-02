@@ -71,7 +71,8 @@ export default function usePlugins() {
     const installedPlugins =
       getMMKVObject<PluginItem[]>(INSTALLED_PLUGINS) || [];
     return fetchPlugins().then(fetchedPlugins => {
-      fetchedPlugins.filter(plg => {
+      // Update installed plugins with update status
+      fetchedPlugins.forEach(plg => {
         const finded = installedPlugins.find(v => v.id === plg.id);
         if (finded) {
           if (newer(plg.version, finded.version)) {
@@ -82,9 +83,7 @@ export default function usePlugins() {
               setLastUsedPlugin(finded);
             }
           }
-          return false;
         }
-        return true;
       });
       setMMKVObject(INSTALLED_PLUGINS, installedPlugins);
       setMMKVObject(AVAILABLE_PLUGINS, fetchedPlugins);

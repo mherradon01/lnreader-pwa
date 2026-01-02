@@ -140,15 +140,41 @@ const fetchPlugins = async (): Promise<PluginItem[]> => {
   const allPlugins: PluginItem[] = [];
   const allRepositories = getRepositoriesFromDb();
 
+  if (allRepositories.length === 0) {
+    return [];
+  }
+
   const repoPluginsRes = await Promise.allSettled(
     allRepositories.map(({ url }) => proxyFetch(url).then(res => res.json())),
   );
 
-  repoPluginsRes.forEach(repoPlugins => {
+  repoPluginsRes.forEach((repoPlugins, index) => {
     if (repoPlugins.status === 'fulfilled') {
-      allPlugins.push(...repoPlugins.value);
+      try {
+        // Handle multiple possible JSON structures:
+        // 1. Direct array: [{id, name, ...}, ...]
+        // 2. Object with plugins property: {plugins: [{id, name, ...}, ...]}
+        // 3. Object with data property: {data: [{id, name, ...}, ...]}
+        let plugins: any[] = [];
+        
+        if (Array.isArray(repoPlugins.value)) {
+          plugins = repoPlugins.value;
+        } else if (repoPlugins.value?.plugins && Array.isArray(repoPlugins.value.plugins)) {
+          plugins = repoPlugins.value.plugins;
+        } else if (repoPlugins.value?.data && Array.isArray(repoPlugins.value.data)) {
+          plugins = repoPlugins.value.data;
+        }
+        
+        if (plugins.length > 0) {
+          allPlugins.push(...plugins);
+        } else if (Object.keys(repoPlugins.value || {}).length > 0) {
+          showToast(`Repository ${index + 1}: Invalid format, no plugins found`);
+        }
+      } catch (error) {
+        showToast(`Repository ${index + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     } else {
-      showToast(repoPlugins.reason.toString());
+      showToast(`Repository ${index + 1}: ${repoPlugins.reason?.message || repoPlugins.reason?.toString() || 'Unknown error'}`);
     }
   });
 
