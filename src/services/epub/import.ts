@@ -140,7 +140,7 @@ const insertLocalChapter = async (
     const novelDir = NOVEL_STORAGE + '/local/' + novelId;
     const epubCacheDir = NativeFile.getConstants().ExternalCachesDirectoryPath + '/epub';
     
-    // Rewrite resource paths to point to EPUB cache directory
+    // Rewrite resource paths - inline images as data URLs for web compatibility
     // This handles images, stylesheets, fonts, etc.
     // For very large files, skip the rewriting to avoid stack overflow
     if (chapterText.length < 10 * 1024 * 1024) { // 10MB limit
@@ -150,24 +150,55 @@ const insertLocalChapter = async (
           ? chapterDirFull.substring(epubCacheDir.length + 1) 
           : chapterDirFull;
         
-        chapterText = chapterText.replace(
-          /(href|src)=["']([^"']*?)["']/g,
-          (match: string, attrName: string, resourcePath: string) => {
-            // Skip absolute URLs and data URLs
-            if (resourcePath.startsWith('http') || resourcePath.startsWith('data:')) {
-              return match;
+        // Process each src/href attribute
+        const matches = Array.from(chapterText.matchAll(/(href|src)=["']([^"']*?)["']/g));
+        
+        for (const match of matches) {
+          const [fullMatch, attrName, resourcePath] = match;
+          
+          // Skip absolute URLs and data URLs
+          if (resourcePath.startsWith('http') || resourcePath.startsWith('data:')) {
+            continue;
+          }
+          // Skip already-converted file:// URLs
+          if (resourcePath.startsWith('file://')) {
+            continue;
+          }
+          
+          // For images, inline as data URLs for web compatibility
+          if (attrName === 'src' && /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(resourcePath)) {
+            try {
+              const resolvedPath = epubCacheDir + '/' + chapterDirRelative + '/' + resourcePath;
+              const normalizedPath = normalizePath(resolvedPath);
+              const decodedResourcePath = decodePath(normalizedPath);
+              
+              if (await NativeFile.exists(decodedResourcePath)) {
+                // Read image as base64
+                const base64Data = await NativeFile.readFile(decodedResourcePath);
+                
+                // Determine MIME type
+                const ext = resourcePath.split('.').pop()?.toLowerCase();
+                const mimeType = ext === 'png' ? 'image/png' : 
+                               ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' :
+                               ext === 'webp' ? 'image/webp' :
+                               ext === 'gif' ? 'image/gif' :
+                               ext === 'svg' ? 'image/svg+xml' : 'image/png';
+                
+                // Replace with data URL
+                const dataUrl = `data:${mimeType};base64,${base64Data}`;
+                chapterText = chapterText.replace(fullMatch, `${attrName}="${dataUrl}"`);
+              }
+            } catch (error) {
+              console.warn('[insertLocalChapter] Failed to inline image:', resourcePath, error);
             }
-            // Skip already-converted file:// URLs
-            if (resourcePath.startsWith('file://')) {
-              return match;
-            }
-            
+          }
+          // For CSS and other resources, keep relative paths but point to cache
+          else {
             const resolvedPath = epubCacheDir + '/' + chapterDirRelative + '/' + resourcePath;
             const normalizedPath = normalizePath(resolvedPath);
-            
-            return `${attrName}="${normalizedPath}"`;
-          },
-        );
+            chapterText = chapterText.replace(fullMatch, `${attrName}="file://${normalizedPath}"`);
+          }
+        }
       } catch (error) {
         console.warn('[insertLocalChapter] Error rewriting paths, continuing without rewriting:', error);
       }

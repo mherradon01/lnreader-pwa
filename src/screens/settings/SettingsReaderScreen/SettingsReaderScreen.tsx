@@ -1,4 +1,4 @@
-import { View, StatusBar, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, StatusBar, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useNavigation } from '@react-navigation/native';
@@ -97,8 +97,21 @@ const SettingsReaderScreen = () => {
   const chapterGeneralSettings = useChapterGeneralSettings();
 
   const BOTTOM_SHEET_HEIGHT = screenHeight * 0.7;
+  
+  /**
+   * Get the assets URI prefix for loading reader resources
+   * - On web dev: Use /assets (served by webpack CopyWebpackPlugin)
+   * - On web production: Use /assets (bundled by webpack)
+   * - On native dev: Use /assets (fallback to web assets path)
+   * - On native production: Use file:///android_asset
+   */
   const assetsUriPrefix = useMemo(
-    () => (__DEV__ ? 'http://localhost:8081/assets' : 'file:///android_asset'),
+    () => {
+      if (!__DEV__) {
+        return Platform.OS === 'web' ? '/assets' : 'file:///android_asset';
+      }
+      return '/assets';
+    },
     [],
   );
   const webViewCSS = `

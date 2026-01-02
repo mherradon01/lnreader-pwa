@@ -59,9 +59,23 @@ const onLogMessage = (payload: { nativeEvent: { data: string } }) => {
 const { RNDeviceInfo } = NativeModules;
 const deviceInfoEmitter = new NativeEventEmitter(RNDeviceInfo);
 
-const assetsUriPrefix = __DEV__
-  ? (Platform.OS === 'web' ? '/assets' : 'http://localhost:8081/assets')
-  : 'file:///android_asset';
+/**
+ * Get the assets URI prefix for loading reader resources
+ * - On web dev: Use /assets (served by webpack CopyWebpackPlugin)
+ * - On web production: Use /assets (bundled by webpack)
+ * - On native dev: Use /assets (fallback to web assets path)
+ * - On native production: Use file:///android_asset
+ */
+const getAssetsUriPrefix = () => {
+  if (!__DEV__) {
+    // Production: use android_asset for native, /assets for web
+    return Platform.OS === 'web' ? '/assets' : 'file:///android_asset';
+  }
+  // Development: use /assets for all (webpack serves it)
+  return '/assets';
+};
+
+const assetsUriPrefix = getAssetsUriPrefix();
 
 const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
   const {
@@ -502,7 +516,6 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
                 var initialPageReaderConfig = ${JSON.stringify({
                   nextChapterScreenVisible: nextChapterScreenVisible.current,
                 })};
-
 
                 var initialReaderConfig = ${JSON.stringify({
                   readerSettings,

@@ -29,9 +29,15 @@ module.exports = (env, argv) => {
     mode: isDev ? 'development' : 'production',
     devtool: isDev ? 'eval-source-map' : 'source-map',
     devServer: {
-      static: {
-        directory: path.join(__dirname, 'public'),
-      },
+      static: [
+        {
+          directory: path.join(__dirname, 'public'),
+        },
+        {
+          directory: path.join(__dirname, 'android/app/src/main/assets'),
+          publicPath: '/assets',
+        },
+      ],
       historyApiFallback: true,
       hot: true,
       port: 3000,
@@ -223,6 +229,7 @@ module.exports = (env, argv) => {
           { from: 'public/fonts', to: 'fonts' },
           { from: 'public/manifest.json', to: 'manifest.json' },
           { from: 'public/sql-wasm.wasm', to: 'sql-wasm.wasm' },
+          { from: 'android/app/src/main/assets', to: 'assets' },
         ],
       }),
       new webpack.DefinePlugin({
