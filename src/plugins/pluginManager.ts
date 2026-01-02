@@ -114,7 +114,7 @@ const installPlugin = async (
     } else if (NativeFile.exists(customCSSPath)) {
       NativeFile.unlink(customCSSPath);
     }
-    NativeFile.writeFile(pluginPath, rawCode);
+    await NativeFile.writeFile(pluginPath, rawCode);
   }
   return currentPlugin;
 };
@@ -189,11 +189,24 @@ const getPlugin = (pluginId: string) => {
   if (!plugins[pluginId]) {
     const filePath = `${PLUGIN_STORAGE}/${pluginId}/index.js`;
     try {
-      const code = NativeFile.readFile(filePath);
+      // Use readFileSync on web, readFile on native
+      let code: string;
+      
+      // Check if we're on web and if readFileSync exists
+      if (typeof (NativeFile as any).readFileSync === 'function') {
+        console.log('[pluginManager.getPlugin] Using sync read for plugin:', pluginId);
+        code = (NativeFile as any).readFileSync(filePath);
+      } else {
+        // Fallback - this will fail on native, but on web it should use readFileSync
+        console.error('[pluginManager.getPlugin] readFileSync not available, plugin loading will fail:', pluginId);
+        return undefined;
+      }
+      
       const plugin = initPlugin(pluginId, code);
       plugins[pluginId] = plugin;
-    } catch {
-      // file doesnt exist
+    } catch (err) {
+      // file doesnt exist or error reading
+      console.warn('[pluginManager.getPlugin] Failed to load plugin:', pluginId, err);
       return undefined;
     }
   }

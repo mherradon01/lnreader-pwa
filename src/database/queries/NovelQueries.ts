@@ -42,22 +42,27 @@ export const insertNovelAndChapters = async (
 
   if (novelId) {
     if (sourceNovel.cover) {
-      const novelDir = NOVEL_STORAGE + '/' + pluginId + '/' + novelId;
-      NativeFile.mkdir(novelDir);
-      const novelCoverPath = novelDir + '/cover.png';
-      const novelCoverUri = 'file://' + novelCoverPath;
-      await downloadFile(
-        sourceNovel.cover,
-        novelCoverPath,
-        getPlugin(pluginId)?.imageRequestInit,
-      ).then(() => {
-        runSync([
-          [
-            'UPDATE Novel SET cover = ? WHERE id = ?',
-            [novelCoverUri, novelId!],
-          ],
-        ]);
-      });
+      try {
+        const novelDir = NOVEL_STORAGE + '/' + pluginId + '/' + novelId;
+        NativeFile.mkdir(novelDir);
+        const novelCoverPath = novelDir + '/cover.png';
+        const novelCoverUri = 'file://' + novelCoverPath;
+        await downloadFile(
+          sourceNovel.cover,
+          novelCoverPath,
+          getPlugin(pluginId)?.imageRequestInit,
+        ).then(() => {
+          runSync([
+            [
+              'UPDATE Novel SET cover = ? WHERE id = ?',
+              [novelCoverUri, novelId!],
+            ],
+          ]);
+        });
+      } catch (err) {
+        console.warn('[NovelQueries] Failed to download cover image:', err);
+        // Continue without cover - don't fail the entire novel insertion
+      }
     }
     await insertChapters(novelId, sourceNovel.chapters);
   }

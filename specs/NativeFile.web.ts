@@ -4,6 +4,9 @@ const STORE_NAME = 'files';
 
 let db: IDBDatabase | null = null;
 
+// In-memory cache for synchronous access (used for plugins that need sync readFile)
+const fileCache = new Map<string, string>();
+
 const initDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
     if (db) {
@@ -43,6 +46,9 @@ interface ReadDirResult {
 
 const NativeFile = {
   writeFile: async (path: string, content: string): Promise<void> => {
+    // Also cache for synchronous access
+    fileCache.set(path, content);
+
     const database = await initDB();
     return new Promise((resolve, reject) => {
       const transaction = database.transaction([STORE_NAME], 'readwrite');
@@ -55,6 +61,11 @@ const NativeFile = {
   },
 
   readFile: async (path: string): Promise<string> => {
+    // Check cache first
+    if (fileCache.has(path)) {
+      return fileCache.get(path)!;
+    }
+
     const database = await initDB();
     return new Promise((resolve, reject) => {
       const transaction = database.transaction([STORE_NAME], 'readonly');
@@ -64,9 +75,8 @@ const NativeFile = {
       request.onsuccess = () => {
         if (request.result) {
           const entry = request.result as FileEntry;
-          // Return the content as-is
-          // If it was stored as base64, it's still base64
-          // The caller will handle decoding if needed
+          // Cache the content for synchronous access
+          fileCache.set(path, entry.content);
           resolve(entry.content);
         } else {
           reject(new Error(`File not found: ${path}`));
@@ -74,6 +84,15 @@ const NativeFile = {
       };
       request.onerror = () => reject(request.error);
     });
+  },
+
+  readFileSync: (path: string): string => {
+    // For synchronous reads (plugin loading), use the in-memory cache
+    const cached = fileCache.get(path);
+    if (cached !== undefined) {
+      return cached;
+    }
+    throw new Error(`File not found (not in cache): ${path}. This file needs to be read asynchronously first.`);
   },
 
   copyFile: async (sourcePath: string, destPath: string): Promise<void> => {
@@ -247,8 +266,49 @@ const NativeFile = {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const content = await response.text();
-    await NativeFile.writeFile(destPath, content);
+    // For image files, read as blob and convert to base64
+    const contentType = response.headers.get('content-type') || '';
+    const isImage = contentType.startsWith('image/');
+    
+    let content: string;
+    let isBase64 = false;
+
+    if (isImage) {
+      console.log('[NativeFile.downloadFile] Downloading image file as blob:', destPath);
+      const blob = await response.blob();
+      // Convert blob to base64
+      content = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          // Extract the base64 part (remove data:image/...;base64, prefix)
+          const parts = base64.split(',');
+          resolve(parts.length === 2 ? parts[1] : base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      isBase64 = true;
+    } else {
+      content = await response.text();
+    }
+
+    // Store with isBase64 flag
+    const database = await initDB();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction([STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.put({ path: destPath, content, isDirectory: false, isBase64 });
+
+      request.onsuccess = () => {
+        console.log('[NativeFile.downloadFile] File downloaded and stored:', destPath, 'isBase64:', isBase64);
+        resolve();
+      };
+      request.onerror = () => {
+        console.error('[NativeFile.downloadFile] Error storing file:', request.error);
+        reject(request.error);
+      };
+    });
   },
 
   getConstants: () => ({

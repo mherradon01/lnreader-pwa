@@ -57,6 +57,86 @@ module.exports = (env, argv) => {
           res.setHeader('Content-Type', 'application/json');
           res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
         });
+
+        // Generic CORS proxy for cross-origin requests
+        // Handle OPTIONS preflight requests
+        devServer.app.options('/cors-proxy', (req, res) => {
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+          res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Referrer-Policy');
+          res.sendStatus(200);
+        });
+
+        // Handle all HTTP methods for CORS proxy
+        devServer.app.all('/cors-proxy', async (req, res) => {
+          const { url } = req.query;
+          
+          console.log('[CORS Proxy] Request:', {
+            method: req.method,
+            url,
+            headers: req.headers,
+          });
+          
+          if (!url || typeof url !== 'string') {
+            console.error('[CORS Proxy] Missing URL parameter');
+            return res.status(400).json({ error: 'Missing or invalid url parameter' });
+          }
+
+          try {
+            // Use dynamic import for node-fetch if available, otherwise use native fetch
+            let fetchImpl;
+            try {
+              const nodeFetch = await import('node-fetch');
+              fetchImpl = nodeFetch.default || nodeFetch;
+            } catch {
+              // Use native fetch (Node 18+)
+              fetchImpl = fetch;
+            }
+
+            // Forward the original request method and body
+            const fetchOptions = {
+              method: req.method === 'OPTIONS' ? 'GET' : req.method,
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              },
+            };
+
+            // Copy relevant headers from original request
+            if (req.headers['content-type']) {
+              fetchOptions.headers['Content-Type'] = req.headers['content-type'];
+            }
+
+            // Forward body for POST, PUT, PATCH requests
+            if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body) {
+              fetchOptions.body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+            }
+
+            console.log('[CORS Proxy] Fetching:', url, fetchOptions);
+            const response = await fetchImpl(url, fetchOptions);
+            console.log('[CORS Proxy] Response:', response.status, response.statusText);
+
+            // Copy headers from the target response
+            const contentType = response.headers.get('content-type');
+            if (contentType) {
+              res.setHeader('Content-Type', contentType);
+            }
+            
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Referrer-Policy');
+
+            // Get response body
+            const buffer = Buffer.from(await response.arrayBuffer());
+            res.send(buffer);
+          } catch (error) {
+            console.error('[CORS proxy error]:', error);
+            res.status(500).json({ 
+              error: 'Failed to fetch from target URL',
+              details: error instanceof Error ? error.message : 'Unknown error'
+            });
+          }
+        });
+
         return middlewares;
       },
     },

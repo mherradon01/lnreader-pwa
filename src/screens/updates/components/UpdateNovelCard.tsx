@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, View, Image } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { ProxiedImage as Image } from '@components';
 
 import {
   ChapterInfo,

@@ -29,17 +29,30 @@ if (typeof window !== 'undefined' && window.localStorage) {
 
 const initDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
-    if (dbInstance) {
-      resolve(dbInstance);
-      return;
-    }
-
+    // Always open a fresh connection to avoid "connection closing" errors
     const request = indexedDB.open(DB_NAME, 1);
 
-    request.onerror = () => reject(request.error);
+    request.onerror = () => {
+      console.warn('[MMKV] IndexedDB open error, will use localStorage fallback:', request.error);
+      reject(request.error);
+    };
+    
     request.onsuccess = () => {
-      dbInstance = request.result;
-      resolve(dbInstance);
+      const db = request.result;
+      dbInstance = db;
+      
+      // Handle database close/connection errors
+      db.onclose = () => {
+        console.warn('[MMKV] IndexedDB connection closed');
+        dbInstance = null;
+      };
+      
+      db.onerror = (event) => {
+        console.warn('[MMKV] IndexedDB error:', event);
+        dbInstance = null;
+      };
+      
+      resolve(db);
     };
 
     request.onupgradeneeded = (event) => {
@@ -100,15 +113,44 @@ class MMKVWeb {
   }
 
   private async persistToDB(key: string, value: string | number | boolean): Promise<void> {
-    const db = await this.getDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.put({ key, value });
+    try {
+      const db = await this.getDB();
+      return new Promise((resolve, reject) => {
+        try {
+          const transaction = db.transaction([STORE_NAME], 'readwrite');
+          
+          transaction.onerror = () => {
+            console.warn('[MMKV] Transaction error, connection may be closing');
+            dbInstance = null;
+            reject(transaction.error);
+          };
+          
+          transaction.onabort = () => {
+            console.warn('[MMKV] Transaction aborted');
+            dbInstance = null;
+            reject(new Error('Transaction aborted'));
+          };
+          
+          const store = transaction.objectStore(STORE_NAME);
+          const request = store.put({ key, value });
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+          request.onsuccess = () => resolve();
+          request.onerror = () => {
+            console.warn('[MMKV] Request error in persistToDB');
+            reject(request.error);
+          };
+        } catch (err) {
+          console.warn('[MMKV] Error creating transaction:', err);
+          dbInstance = null;
+          reject(err);
+        }
+      });
+    } catch (err) {
+      // If IndexedDB fails, just use localStorage (which is already done in set())
+      console.warn('[MMKV] Skipping IndexedDB persistence, using localStorage only:', err);
+      // Don't throw - localStorage is already updated
+      return Promise.resolve();
+    }
   }
 
   getString(key: string): string | undefined {

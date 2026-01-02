@@ -5,8 +5,8 @@ import {
   Text,
   useWindowDimensions,
   Pressable,
-  Image,
 } from 'react-native';
+import ProxiedImage from './ProxiedImage';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import ListView from './ListView';
@@ -198,7 +198,7 @@ function NovelCover<
           ) : null}
           {inActivity ? <InActivityBadge theme={theme} /> : null}
         </View>
-        <Image
+        <ProxiedImage
           source={{ uri, ...requestInit }}
           style={[
             {

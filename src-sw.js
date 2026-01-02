@@ -50,6 +50,54 @@ registerRoute(
   })
 );
 
+// Handle CORS proxy requests for cross-origin plugin data
+registerRoute(
+  ({ url }) => url.pathname === '/cors-proxy',
+  async (context) => {
+    const { request } = context;
+    const url = new URL(request.url);
+    const targetUrl = url.searchParams.get('url');
+
+    if (!targetUrl) {
+      return new Response(JSON.stringify({ error: 'Missing url parameter' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    try {
+      const response = await fetch(targetUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Referrer-Policy': 'no-referrer',
+        },
+      });
+
+      // Clone the response and add CORS headers
+      const newResponse = response.clone();
+      const headers = new Headers(newResponse.headers);
+      headers.set('Access-Control-Allow-Origin', '*');
+      headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+      return new Response(newResponse.body, {
+        status: newResponse.status,
+        statusText: newResponse.statusText,
+        headers: headers,
+      });
+    } catch (error) {
+      console.error('CORS proxy error:', error);
+      return new Response(JSON.stringify({ 
+        error: 'Failed to fetch from target URL',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+);
+
 // Enable offline functionality for navigation requests
 registerRoute(
   ({ request }) => request.mode === 'navigate',

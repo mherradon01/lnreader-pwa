@@ -60,10 +60,20 @@ export const fetchPage = async (
     throw new Error(`Unknown plugin: ${pluginId}`);
   }
 
+  console.log('[fetchPage] Plugin loaded:', {
+    pluginId,
+    hasParseNovel: !!plugin.parseNovel,
+    hasParsePage: !!plugin.parsePage,
+    hasParseChapter: !!plugin.parseChapter,
+  });
+
   if (!plugin.parsePage) {
-    throw new Error(`Could not fetch chapters for page ${page}`);
+    throw new Error(`Plugin "${pluginId}" does not have parsePage method`);
   }
+  
+  console.log('[fetchPage] Calling parsePage for:', { pluginId, novelPath, page });
   const res = await plugin.parsePage(novelPath, page);
+  console.log('[fetchPage] parsePage returned:', res?.chapters?.length, 'chapters');
   return res;
 };
 
