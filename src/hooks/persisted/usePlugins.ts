@@ -8,6 +8,7 @@ import {
   installPlugin as _install,
   uninstallPlugin as _uninstall,
   updatePlugin as _update,
+  preLoadInstalledPlugins,
 } from '@plugins/pluginManager';
 import { newer } from '@utils/compareVersion';
 import { MMKVStorage, getMMKVObject, setMMKVObject } from '@utils/mmkv/mmkv';
@@ -70,6 +71,15 @@ export default function usePlugins() {
   const refreshPlugins = useCallback(() => {
     const installedPlugins =
       getMMKVObject<PluginItem[]>(INSTALLED_PLUGINS) || [];
+    
+    // Pre-load all installed plugins in the background
+    const installedPluginIds = installedPlugins.map(p => p.id);
+    if (installedPluginIds.length > 0) {
+      preLoadInstalledPlugins(installedPluginIds).catch(err => {
+        console.warn('[usePlugins.refreshPlugins] Error pre-loading plugins:', err);
+      });
+    }
+    
     return fetchPlugins().then(fetchedPlugins => {
       // Update installed plugins with update status
       fetchedPlugins.forEach(plg => {

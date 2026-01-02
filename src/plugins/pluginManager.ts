@@ -248,11 +248,32 @@ const loadPlugin = async (pluginId: string) => {
   }
 };
 
+const preLoadInstalledPlugins = async (installedPluginIds: string[]) => {
+  console.log('[pluginManager.preLoadInstalledPlugins] Pre-loading installed plugins:', installedPluginIds);
+  
+  // Load all installed plugins in parallel
+  const loadPromises = installedPluginIds
+    .filter(id => id !== LOCAL_PLUGIN_ID)
+    .map(pluginId => 
+      loadPlugin(pluginId).catch(err => {
+        console.warn('[pluginManager.preLoadInstalledPlugins] Failed to pre-load plugin:', pluginId, err);
+        return undefined;
+      })
+    );
+  
+  const results = await Promise.all(loadPromises);
+  const loaded = results.filter(p => p !== undefined).length;
+  console.log(`[pluginManager.preLoadInstalledPlugins] Pre-loaded ${loaded}/${installedPluginIds.length} plugins`);
+  
+  return results;
+};
+
 const LOCAL_PLUGIN_ID = 'local';
 
 export {
   getPlugin,
   loadPlugin,
+  preLoadInstalledPlugins,
   installPlugin,
   uninstallPlugin,
   updatePlugin,
