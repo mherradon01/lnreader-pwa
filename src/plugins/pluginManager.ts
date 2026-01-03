@@ -194,18 +194,18 @@ const getPlugin = (pluginId: string) => {
       
       // Check if we're on web and if readFileSync exists
       if (typeof (NativeFile as any).readFileSync === 'function') {
-        console.log('[pluginManager.getPlugin] Using sync read for plugin:', pluginId);
+        // console.log('[pluginManager.getPlugin] Using sync read for plugin:', pluginId);
         try {
           code = (NativeFile as any).readFileSync(filePath);
         } catch (syncErr) {
-          console.warn('[pluginManager.getPlugin] Plugin not in memory cache, trying async read:', pluginId);
+          // console.warn('[pluginManager.getPlugin] Plugin not in memory cache, trying async read:', pluginId);
           // Plugin file not in memory cache yet - this can happen on first access
           // Return undefined and let it be loaded asynchronously
           return undefined;
         }
       } else {
         // Fallback - this will fail on native, but on web it should use readFileSync
-        console.error('[pluginManager.getPlugin] readFileSync not available, plugin loading will fail:', pluginId);
+        // console.error('[pluginManager.getPlugin] readFileSync not available, plugin loading will fail:', pluginId);
         return undefined;
       }
       
@@ -213,7 +213,7 @@ const getPlugin = (pluginId: string) => {
       plugins[pluginId] = plugin;
     } catch (err) {
       // file doesnt exist or error reading
-      console.warn('[pluginManager.getPlugin] Failed to load plugin:', pluginId, err);
+      // console.warn('[pluginManager.getPlugin] Failed to load plugin:', pluginId, err);
       return undefined;
     }
   }
@@ -227,43 +227,43 @@ const loadPlugin = async (pluginId: string) => {
 
   // Return cached plugin if available
   if (plugins[pluginId]) {
-    console.log('[pluginManager.loadPlugin] Using cached plugin:', pluginId);
+    // console.log('[pluginManager.loadPlugin] Using cached plugin:', pluginId);
     return plugins[pluginId];
   }
 
   const filePath = `${PLUGIN_STORAGE}/${pluginId}/index.js`;
   try {
-    console.log('[pluginManager.loadPlugin] Async loading plugin:', pluginId);
+    // console.log('[pluginManager.loadPlugin] Async loading plugin:', pluginId);
     // Use async readFile to load from IndexedDB
     const code = await (NativeFile as any).readFile(filePath);
-    console.log('[pluginManager.loadPlugin] Successfully loaded plugin code, initializing:', pluginId);
+    // console.log('[pluginManager.loadPlugin] Successfully loaded plugin code, initializing:', pluginId);
     
     const plugin = initPlugin(pluginId, code);
     plugins[pluginId] = plugin;
-    console.log('[pluginManager.loadPlugin] Plugin initialized successfully:', pluginId);
+    // console.log('[pluginManager.loadPlugin] Plugin initialized successfully:', pluginId);
     return plugin;
   } catch (err) {
-    console.error('[pluginManager.loadPlugin] Failed to load plugin:', pluginId, err);
+    // console.error('[pluginManager.loadPlugin] Failed to load plugin:', pluginId, err);
     return undefined;
   }
 };
 
 const preLoadInstalledPlugins = async (installedPluginIds: string[]) => {
-  console.log('[pluginManager.preLoadInstalledPlugins] Pre-loading installed plugins:', installedPluginIds);
+  // console.log('[pluginManager.preLoadInstalledPlugins] Pre-loading installed plugins:', installedPluginIds);
   
   // Load all installed plugins in parallel
   const loadPromises = installedPluginIds
     .filter(id => id !== LOCAL_PLUGIN_ID)
     .map(pluginId => 
-      loadPlugin(pluginId).catch(err => {
-        console.warn('[pluginManager.preLoadInstalledPlugins] Failed to pre-load plugin:', pluginId, err);
+      loadPlugin(pluginId).catch(_err => {
+        // console.warn('[pluginManager.preLoadInstalledPlugins] Failed to pre-load plugin:', pluginId, _err);
         return undefined;
       })
     );
   
   const results = await Promise.all(loadPromises);
-  const loaded = results.filter(p => p !== undefined).length;
-  console.log(`[pluginManager.preLoadInstalledPlugins] Pre-loaded ${loaded}/${installedPluginIds.length} plugins`);
+  // const loaded = results.filter(p => p !== undefined).length;
+  // console.log(`[pluginManager.preLoadInstalledPlugins] Pre-loaded ${loaded}/${installedPluginIds.length} plugins`);
   
   return results;
 };

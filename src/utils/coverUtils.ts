@@ -1,6 +1,5 @@
 import { Platform } from 'react-native';
 import { defaultCover } from '@plugins/helpers/constants';
-import NativeFile from '@specs/NativeFile';
 import { proxyUrl } from './proxyFetch';
 
 // Cache for blob URLs and their corresponding blob objects to prevent garbage collection
@@ -14,7 +13,6 @@ const blobUrlCache = new Map<string, { url: string; blob: Blob }>();
  */
 export const getWebSafeCoverUri = async (coverUri: string | undefined | null): Promise<string> => {
   if (!coverUri) {
-    console.log('[getWebSafeCoverUri] No cover URI provided, using default');
     return defaultCover;
   }
 
@@ -25,19 +23,16 @@ export const getWebSafeCoverUri = async (coverUri: string | undefined | null): P
 
   // On web, file:// URLs need to be converted to blob URLs
   if (Platform.OS === 'web' && coverUri.startsWith('file://')) {
-    console.log('[getWebSafeCoverUri] Web platform detected, converting file:// URL:', coverUri);
     
     // Check cache first
     if (blobUrlCache.has(coverUri)) {
       const cached = blobUrlCache.get(coverUri)!;
-      console.log('[getWebSafeCoverUri] Using cached blob URL:', cached.url);
       return cached.url;
     }
     
     try {
       // Remove file:// prefix and query params for reading
       const filePath = coverUri.replace(/^file:\/\//, '').split('?')[0];
-      console.log('[getWebSafeCoverUri] Reading file from:', filePath);
       
       // Read the file from IndexedDB with metadata
       const database = await (async () => {
@@ -62,13 +57,10 @@ export const getWebSafeCoverUri = async (coverUri: string | undefined | null): P
         request.onerror = () => reject(request.error);
       });
 
-      console.log('[getWebSafeCoverUri] File entry loaded, isBase64:', fileEntry.isBase64, 'contentLength:', fileEntry.content?.length);
-
       let byteArray: Uint8Array;
 
       if (fileEntry.isBase64) {
         // Decode from base64
-        console.log('[getWebSafeCoverUri] Decoding base64 content');
         const binaryString = atob(fileEntry.content);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
@@ -77,7 +69,6 @@ export const getWebSafeCoverUri = async (coverUri: string | undefined | null): P
         byteArray = bytes;
       } else {
         // It's already binary, encode as UTF-8
-        console.log('[getWebSafeCoverUri] Using content as UTF-8');
         const encoder = new TextEncoder();
         byteArray = encoder.encode(fileEntry.content);
       }
@@ -88,26 +79,20 @@ export const getWebSafeCoverUri = async (coverUri: string | undefined | null): P
                        ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' :
                        ext === 'webp' ? 'image/webp' :
                        ext === 'gif' ? 'image/gif' : 'image/png';
-      
-      console.log('[getWebSafeCoverUri] Creating blob with MIME type:', mimeType, 'size:', byteArray.byteLength);
       const blob = new Blob([byteArray], { type: mimeType });
       const blobUrl = URL.createObjectURL(blob);
       
       // Cache both the blob and URL to keep blob in memory
       blobUrlCache.set(coverUri, { url: blobUrl, blob });
       
-      console.log('[getWebSafeCoverUri] Created blob URL:', blobUrl);
       return blobUrl;
     } catch (error) {
-      console.warn('[getWebSafeCoverUri] Failed to load local file:', error);
-      console.warn('[getWebSafeCoverUri] Local file does not exist, using default cover. Cover was likely not downloaded successfully.');
       // File doesn't exist locally - just use the default
       // In a real app, you might want to retry downloading from the remote URL
       return defaultCover;
     }
   }
 
-  console.log('[getWebSafeCoverUri] Returning cover URI:', coverUri);
   return coverUri;
 };
 

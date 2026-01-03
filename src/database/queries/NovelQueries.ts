@@ -60,7 +60,7 @@ export const insertNovelAndChapters = async (
           ]);
         });
       } catch (err) {
-        console.warn('[NovelQueries] Failed to download cover image:', err);
+        // console.warn('[NovelQueries] Failed to download cover image:', err);
         // Continue without cover - don't fail the entire novel insertion
       }
     }

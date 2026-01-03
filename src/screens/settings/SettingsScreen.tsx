@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { ScrollView } from 'react-native';
 
 import { Appbar, List, SafeAreaView } from '@components';
 import { useTheme } from '@hooks/persisted';
@@ -94,5 +94,3 @@ const SettingsScreen = ({ navigation }: SettingsScreenProps) => {
 };
 
 export default SettingsScreen;
-
-const styles = StyleSheet.create({});

@@ -15,7 +15,6 @@ import ChapterItem from '@screens/novel/components/ChapterItem';
 import { useDownload, useTheme, useUpdates } from '@hooks/persisted';
 import { RootStackParamList } from '@navigators/types';
 import { FlatList } from 'react-native-gesture-handler';
-import { defaultCover } from '@plugins/helpers/constants';
 import { getWebSafeCoverUri } from '@utils/coverUtils';
 import { ThemeColors } from '@theme/types';
 

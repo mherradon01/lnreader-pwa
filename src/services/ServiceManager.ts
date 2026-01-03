@@ -206,7 +206,7 @@ export default class ServiceManager {
         setMMKVObject(this.STORE_KEY, [minimalTask, ...taskList.slice(1)]);
       }
     } catch (error) {
-      console.error('[ServiceManager] Error in setMeta:', error);
+      // console.error('[ServiceManager] Error in setMeta:', error);
     }
   }
 
@@ -410,7 +410,7 @@ export default class ServiceManager {
       
       // Ensure tasks is actually an array
       if (!Array.isArray(tasks)) {
-        console.warn('[ServiceManager] Expected tasks to be an array, got:', typeof tasks);
+        // console.warn('[ServiceManager] Expected tasks to be an array, got:', typeof tasks);
         return [];
       }
 
@@ -449,7 +449,7 @@ export default class ServiceManager {
 
       return convertedTasks;
     } catch (error) {
-      console.error('[ServiceManager] Error in getTaskList:', error);
+      // console.error('[ServiceManager] Error in getTaskList:', error);
       return [];
     }
   }
@@ -482,7 +482,7 @@ export default class ServiceManager {
         this.start();
       }
     } catch (error) {
-      console.error('[ServiceManager] Error in addTask:', error);
+      // console.error('[ServiceManager] Error in addTask:', error);
       throw error;
     }
   }

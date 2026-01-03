@@ -104,11 +104,11 @@ export default function useChapter(
         const freshChapter = await getDbChapter(id);
         const isDownloaded = freshChapter?.isDownloaded ?? false;
         
-        console.log('[useChapter.loadChapterText] Chapter download status from DB:', { id, isDownloaded });
+        // console.log('[useChapter.loadChapterText] Chapter download status from DB:', { id, isDownloaded });
         
         // If chapter is marked as downloaded, try to read from file storage
         if (isDownloaded) {
-          console.log('[useChapter.loadChapterText] Chapter is downloaded, reading from file:', filePath);
+          // console.log('[useChapter.loadChapterText] Chapter is downloaded, reading from file:', filePath);
           
           // On web, readFile is async, so we need to await it
           const fileContent = NativeFile.readFile(filePath);
@@ -118,19 +118,19 @@ export default function useChapter(
             text = fileContent;
           }
           
-          console.log('[useChapter.loadChapterText] Successfully loaded downloaded chapter');
+          // console.log('[useChapter.loadChapterText] Successfully loaded downloaded chapter');
         } else {
           // Chapter not downloaded, fetch from plugin
-          console.log('[useChapter.loadChapterText] Chapter not downloaded, fetching from plugin');
+          // console.log('[useChapter.loadChapterText] Chapter not downloaded, fetching from plugin');
           text = await fetchChapter(novel.pluginId, path);
         }
-      } catch (error) {
-        console.warn('[useChapter.loadChapterText] Error loading chapter from cache, fetching from plugin:', error);
+      } catch (_error) {
+        // comment.warn('[useChapter.loadChapterText] Error loading chapter from cache, fetching from plugin:', _error);
         // If cached file read fails, try fetching from plugin
         try {
           text = await fetchChapter(novel.pluginId, path);
         } catch (fetchError) {
-          console.error('[useChapter.loadChapterText] Failed to fetch chapter:', fetchError);
+          // console.error('[useChapter.loadChapterText] Failed to fetch chapter:', fetchError);
           setError((fetchError as Error)?.message || 'Failed to load chapter');
           throw fetchError;
         }

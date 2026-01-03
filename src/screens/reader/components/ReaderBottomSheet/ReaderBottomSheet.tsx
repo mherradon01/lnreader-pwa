@@ -4,7 +4,6 @@ import {
   Text,
   TextStyle,
   useWindowDimensions,
-  View,
 } from 'react-native';
 import React, {
   RefObject,

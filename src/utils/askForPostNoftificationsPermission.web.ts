@@ -3,7 +3,7 @@
 export async function askForPostNotificationsPermission(): Promise<boolean> {
   // Check if the browser supports notifications
   if (!('Notification' in window)) {
-    console.warn('This browser does not support notifications');
+    // console.warn('This browser does not support notifications');
     return false;
   }
 

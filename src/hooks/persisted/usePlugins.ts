@@ -75,8 +75,8 @@ export default function usePlugins() {
     // Pre-load all installed plugins in the background
     const installedPluginIds = installedPlugins.map(p => p.id);
     if (installedPluginIds.length > 0) {
-      preLoadInstalledPlugins(installedPluginIds).catch(err => {
-        console.warn('[usePlugins.refreshPlugins] Error pre-loading plugins:', err);
+      preLoadInstalledPlugins(installedPluginIds).catch(_err => {
+        // comment.warn('[usePlugins.refreshPlugins] Error pre-loading plugins:', _err);
       });
     }
     

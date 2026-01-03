@@ -22,7 +22,6 @@ export const proxyUrl = (url: string): string => {
   // For other cross-origin URLs on web, use a generic CORS proxy
   // This handles any external API calls that would be CORS blocked
   try {
-    const urlObj = new URL(url);
     const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
     
     // If it's a different origin, proxy it through /cors-proxy

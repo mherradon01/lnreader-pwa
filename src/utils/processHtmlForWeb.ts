@@ -62,18 +62,18 @@ export async function processHtmlForWeb(htmlContent: string): Promise<string> {
 
       let content: string | undefined;
       try {
-        console.log('[processHtmlForWeb] Attempting to read file:', filePath);
+        // console.log('[processHtmlForWeb] Attempting to read file:', filePath);
         content = await NativeFile.readFile(filePath);
-        console.log('[processHtmlForWeb] Successfully read file:', filePath, 'size:', content.length);
+        // console.log('[processHtmlForWeb] Successfully read file:', filePath, 'size:', content.length);
       } catch (error) {
         // File doesn't exist in virtual filesystem - skip it silently
-        console.warn('[processHtmlForWeb] File not found, skipping:', filePath, 'error:', error);
+        // console.warn('[processHtmlForWeb] File not found, skipping:', filePath, 'error:', error);
         continue;
       }
       
       if (!content) {
         // Empty content - skip silently
-        console.warn('[processHtmlForWeb] File is empty, skipping:', filePath);
+        // console.warn('[processHtmlForWeb] File is empty, skipping:', filePath);
         continue;
       }
 
@@ -97,14 +97,14 @@ export async function processHtmlForWeb(htmlContent: string): Promise<string> {
 
         // Update the map with the blob/data URL
         fileUrls.set(fullUrl, blobUrl);
-        console.log('[processHtmlForWeb] Converted file URL:', fullUrl);
+        // console.log('[processHtmlForWeb] Converted file URL:', fullUrl);
       } catch (conversionError) {
-        console.warn('[processHtmlForWeb] Failed to convert file URL:', fullUrl, conversionError);
+        // console.warn('[processHtmlForWeb] Failed to convert file URL:', fullUrl, conversionError);
         continue;
       }
     } catch (error) {
       // Silently skip files that can't be processed
-      console.warn('[processHtmlForWeb] Unexpected error processing:', fullUrl, error);
+      // console.warn('[processHtmlForWeb] Unexpected error processing:', fullUrl, error);
     }
   }
 

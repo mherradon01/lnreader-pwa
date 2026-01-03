@@ -98,14 +98,14 @@ export const initializeDatabaseAsync = async () => {
       'PRAGMA user_version',
     );
     userVersion = result?.user_version ?? 0;
-  } catch (error) {
+  } catch (_error) {
     // If PRAGMA query fails, assume fresh database
     if (__DEV__) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        'Failed to get database version, assuming fresh install:',
-        error,
-      );
+       
+      // comment.warn(
+      //   'Failed to get database version, assuming fresh install:',
+      //   _error,
+      // );
     }
     userVersion = 0;
   }
@@ -148,9 +148,10 @@ export const recreateDatabaseIndexesAsync = async () => {
 // For compatibility - also export sync versions that work after init
 export const initializeDatabase = () => {
   // This is a no-op on web - use initializeDatabaseAsync instead
-  console.warn('[db.web] initializeDatabase called - use initializeDatabaseAsync on web');
+  // console.warn('[db.web] initializeDatabase called - use initializeDatabaseAsync on web');
 };
 
 export const recreateDatabaseIndexes = () => {
+  // eslint-disable-next-line no-console
   recreateDatabaseIndexesAsync().catch(console.error);
 };

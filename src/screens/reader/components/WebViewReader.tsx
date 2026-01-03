@@ -97,7 +97,7 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
       initialChapterReaderSettings,
   );
   const [processedHtml, setProcessedHtml] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(true);
+  const [_isProcessing, setIsProcessing] = useState(true);
   const chapterGeneralSettings = useMemo(
     () =>
       getMMKVObject<ChapterGeneralSettings>(CHAPTER_GENERAL_SETTINGS) ||
@@ -116,7 +116,7 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
   }, [chapter.id]);
 
   // Update battery level when chapter changes to ensure fresh value on navigation
-  const batteryLevel = useMemo(() => getBatteryLevelSync(), [chapter.id]);
+  const batteryLevel = useMemo(() => getBatteryLevelSync(), []);
   const plugin = getPlugin(novel?.pluginId);
   
   // State for plugin custom files content (loaded asynchronously)

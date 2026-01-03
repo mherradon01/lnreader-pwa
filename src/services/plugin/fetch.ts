@@ -11,7 +11,7 @@ export const fetchNovel = async (pluginId: string, novelPath: string) => {
   
   // If plugin not in cache, try async load
   if (!plugin) {
-    console.log('[fetchNovel] Plugin not in cache, attempting async load:', pluginId);
+    // console.log('[fetchNovel] Plugin not in cache, attempting async load:', pluginId);
     plugin = await loadPlugin(pluginId);
   }
   
@@ -34,7 +34,7 @@ export const fetchChapter = async (pluginId: string, chapterPath: string) => {
   
   // If plugin not in cache, try async load
   if (!plugin) {
-    console.log('[fetchChapter] Plugin not in cache, attempting async load:', pluginId);
+    // console.log('[fetchChapter] Plugin not in cache, attempting async load:', pluginId);
     plugin = await loadPlugin(pluginId);
   }
   
@@ -55,7 +55,7 @@ export const fetchChapters = async (pluginId: string, novelPath: string) => {
   
   // If plugin not in cache, try async load
   if (!plugin) {
-    console.log('[fetchChapters] Plugin not in cache, attempting async load:', pluginId);
+    // console.log('[fetchChapters] Plugin not in cache, attempting async load:', pluginId);
     plugin = await loadPlugin(pluginId);
   }
   
@@ -81,7 +81,7 @@ export const fetchPage = async (
   
   // If plugin not in cache, try async load
   if (!plugin) {
-    console.log('[fetchPage] Plugin not in cache, attempting async load:', pluginId);
+    // console.log('[fetchPage] Plugin not in cache, attempting async load:', pluginId);
     plugin = await loadPlugin(pluginId);
   }
 
@@ -89,20 +89,20 @@ export const fetchPage = async (
     throw new Error(`Unknown plugin: ${pluginId}`);
   }
 
-  console.log('[fetchPage] Plugin loaded:', {
-    pluginId,
-    hasParseNovel: !!plugin.parseNovel,
-    hasParsePage: !!plugin.parsePage,
-    hasParseChapter: !!plugin.parseChapter,
-  });
+  // comment.log('[fetchPage] Plugin loaded:', {
+  //   pluginId,
+  //   hasParseNovel: !!plugin.parseNovel,
+  //   hasParsePage: !!plugin.parsePage,
+  //   hasParseChapter: !!plugin.parseChapter,
+  // });
 
   if (!plugin.parsePage) {
     throw new Error(`Plugin "${pluginId}" does not have parsePage method`);
   }
   
-  console.log('[fetchPage] Calling parsePage for:', { pluginId, novelPath, page });
+  // console.log('[fetchPage] Calling parsePage for:', { pluginId, novelPath, page });
   const res = await plugin.parsePage(novelPath, page);
-  console.log('[fetchPage] parsePage returned:', res?.chapters?.length, 'chapters');
+  // console.log('[fetchPage] parsePage returned:', res?.chapters?.length, 'chapters');
   return res;
 };
 

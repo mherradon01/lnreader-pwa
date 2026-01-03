@@ -52,13 +52,13 @@ export async function cacheFile(blob: Blob, filename: string): Promise<string> {
       });
 
       request.onsuccess = () => {
-        console.log(`[FileCache] Cached file: ${filename} with key: ${cacheKey}`);
+        // console.log(`[FileCache] Cached file: ${filename} with key: ${cacheKey}`);
         resolve(cacheKey);
       };
       request.onerror = () => reject(request.error);
     });
   } catch (error) {
-    console.error('[FileCache] Failed to cache file:', error);
+    // console.error('[FileCache] Failed to cache file:', error);
     throw error;
   }
 }
@@ -77,7 +77,7 @@ export async function getCachedFile(cacheKey: string): Promise<Blob> {
 
       request.onsuccess = () => {
         if (request.result) {
-          console.log(`[FileCache] Retrieved cached file: ${cacheKey}`);
+          // console.log(`[FileCache] Retrieved cached file: ${cacheKey}`);
           resolve(request.result.blob);
         } else {
           reject(new Error(`File not found in cache: ${cacheKey}`));
@@ -86,7 +86,7 @@ export async function getCachedFile(cacheKey: string): Promise<Blob> {
       request.onerror = () => reject(request.error);
     });
   } catch (error) {
-    console.error('[FileCache] Failed to retrieve file:', error);
+    // console.error('[FileCache] Failed to retrieve file:', error);
     throw error;
   }
 }
@@ -104,13 +104,13 @@ export async function clearCachedFile(cacheKey: string): Promise<void> {
       const request = store.delete(cacheKey);
 
       request.onsuccess = () => {
-        console.log(`[FileCache] Cleared cached file: ${cacheKey}`);
+        // console.log(`[FileCache] Cleared cached file: ${cacheKey}`);
         resolve();
       };
       request.onerror = () => reject(request.error);
     });
   } catch (error) {
-    console.error('[FileCache] Failed to clear file:', error);
+    // console.error('[FileCache] Failed to clear file:', error);
   }
 }
 
@@ -127,12 +127,12 @@ export async function clearAllCachedFiles(): Promise<void> {
       const request = store.clear();
 
       request.onsuccess = () => {
-        console.log('[FileCache] Cleared all cached files');
+        // console.log('[FileCache] Cleared all cached files');
         resolve();
       };
       request.onerror = () => reject(request.error);
     });
   } catch (error) {
-    console.error('[FileCache] Failed to clear all files:', error);
+    // console.error('[FileCache] Failed to clear all files:', error);
   }
 }

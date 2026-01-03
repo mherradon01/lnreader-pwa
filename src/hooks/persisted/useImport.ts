@@ -1,6 +1,5 @@
 import { useLibraryContext } from '@components/Context/LibraryContext';
 import ServiceManager, { BackgroundTask } from '@services/ServiceManager';
-import NativeFile from '@specs/NativeFile';
 import { DocumentPickerResult } from 'expo-document-picker';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useMMKVObject } from 'react-native-mmkv';
@@ -23,13 +22,9 @@ export default function useImport() {
   const importNovel = useCallback((pickedNovel: DocumentPickerResult) => {
     if (pickedNovel.canceled) return;
 
-    console.log('[useImport] Starting import for', pickedNovel.assets.length, 'files');
-
     // Process each selected file and store in cache directory
     Promise.all(
       pickedNovel.assets.map(async (asset) => {
-        console.log('[useImport] Processing asset:', asset.name, 'size:', asset.size);
-
         try {
           let blob: Blob | null = null;
 
@@ -62,12 +57,9 @@ export default function useImport() {
             throw new Error('Failed to create blob from asset');
           }
 
-          console.log('[useImport] Blob created, size:', blob.size, 'caching in IndexedDB');
-
           // Cache the blob in IndexedDB instead of writing to file system
           // This avoids storing huge URIs in MMKV
           const cacheKey = await cacheFile(blob, asset.name);
-          console.log('[useImport] File cached with key:', cacheKey);
 
           return {
             name: 'IMPORT_EPUB' as const,
@@ -77,12 +69,10 @@ export default function useImport() {
             },
           };
         } catch (error) {
-          console.error('[useImport] Failed to process asset:', asset.name, error);
           return null;
         }
       })
     ).then((tasks) => {
-      console.log('[useImport] Promise.all completed, tasks count:', tasks.length);
       const validTasks = tasks.filter(Boolean) as any;
       
       // Sanitize tasks to ensure they're serializable
@@ -94,19 +84,14 @@ export default function useImport() {
         },
       }));
       
-      console.log('[useImport] Adding', sanitizedTasks.length, 'tasks to queue');
       try {
         ServiceManager.manager.addTask(sanitizedTasks);
-        console.log('[useImport] Tasks added successfully');
       } catch (error) {
-        console.error('[useImport] Failed to add tasks to queue:', error);
         // Alert user with more details
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         alert(`Failed to add import tasks: ${errorMsg}`);
       }
-    }).catch((error) => {
-      console.error('[useImport] Promise.all rejected:', error);
-      console.error('[useImport] Error details:', error instanceof Error ? error.message : 'unknown error');
+    }).catch((_error) => {
     });
   }, []);
 

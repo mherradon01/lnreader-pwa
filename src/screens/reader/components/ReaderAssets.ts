@@ -18,12 +18,12 @@ export const readerAssets = {
    * copies the android assets to the assets folder
    */
   getScriptTags(baseUrl: string = '/assets'): string {
-    return `<script src="${baseUrl}/js/polyfill-onscrollend.js"><\/script>
-<script src="${baseUrl}/js/icons.js"><\/script>
-<script src="${baseUrl}/js/van.js"><\/script>
-<script src="${baseUrl}/js/text-vibe.js"><\/script>
-<script src="${baseUrl}/js/core.js"><\/script>
-<script src="${baseUrl}/js/index.js"><\/script>`;
+    return `<script src="${baseUrl}/js/polyfill-onscrollend.js"></script>
+<script src="${baseUrl}/js/icons.js"></script>
+<script src="${baseUrl}/js/van.js"></script>
+<script src="${baseUrl}/js/text-vibe.js"></script>
+<script src="${baseUrl}/js/core.js"></script>
+<script src="${baseUrl}/js/index.js"></script>`;
   },
 
   /**
