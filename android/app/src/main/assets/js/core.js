@@ -466,6 +466,11 @@ van.derive(() => {
   }
 });
 
+// Provide default value if initialPageReaderConfig is not defined
+if (typeof initialPageReaderConfig === 'undefined') {
+  var initialPageReaderConfig = { nextChapterScreenVisible: false };
+}
+
 window.pageReader = new (function () {
   this.page = van.state(0);
   this.totalPages = van.state(0);

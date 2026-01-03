@@ -589,13 +589,18 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
                     }),
                     noNextChapter: getString('readerScreen.noNextChapter'),
                   },
-                })}
+                })};
               </script>
               <script src="${assetsUriPrefix}/js/polyfill-onscrollend.js"></script>
               <script src="${assetsUriPrefix}/js/icons.js"></script>
               <script src="${assetsUriPrefix}/js/van.js"></script>
               <script src="${assetsUriPrefix}/js/text-vibe.js"></script>
               <script src="${assetsUriPrefix}/js/core.js"></script>
+              <script src="${assetsUriPrefix}/js/index.js"></script>
+              ${pluginCustomJSContent ? `<script>${pluginCustomJSContent}</script>` : ''}
+              <script>
+                ${readerSettings.customJS}
+              </script>
               <script src="${assetsUriPrefix}/js/index.js"></script>
               ${pluginCustomJSContent ? `<script>${pluginCustomJSContent}</script>` : ''}
               <script>
