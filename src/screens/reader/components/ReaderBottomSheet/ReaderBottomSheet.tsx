@@ -15,7 +15,7 @@ import React, {
 } from 'react';
 import Color from 'color';
 
-import { BottomSheetFlashList, BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetFlashList, BottomSheetView, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import BottomSheet from '@components/BottomSheet/BottomSheet';
 import { useChapterGeneralSettings, useTheme } from '@hooks/persisted';
 import { SceneMap, TabBar, TabView } from 'react-native-tab-view';
@@ -47,7 +47,7 @@ type TabViewLabelProps = {
 
 const ReaderTab: React.FC = React.memo(() => (
   <Suspense fallback={<></>}>
-    <View style={styles.readerTab}>
+    <BottomSheetScrollView style={styles.readerTab} showsVerticalScrollIndicator={false}>
       <TextSizeSlider />
       <ReaderThemeSelector />
       <ReaderTextAlignSelector />
@@ -65,7 +65,7 @@ const ReaderTab: React.FC = React.memo(() => (
         unit="px"
       />
       <ReaderFontPicker />
-    </View>
+    </BottomSheetScrollView>
   </Suspense>
 ));
 
@@ -205,6 +205,7 @@ const styles = StyleSheet.create({
   },
   readerTab: {
     paddingVertical: 8,
+    paddingHorizontal: 16,
   },
   tabBar: {
     borderBottomWidth: 0.5,
@@ -213,7 +214,6 @@ const styles = StyleSheet.create({
   tabView: {
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
-    height: 600,
   },
   flex: { flex: 1 },
 });

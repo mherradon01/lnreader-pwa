@@ -64,6 +64,9 @@ const initDB = (): Promise<IDBDatabase> => {
   });
 };
 
+// Global listeners for value changes (for addOnValueChangedListener)
+const globalListeners = new Set<(key: string) => void>();
+
 class MMKVWeb {
   private listeners: Map<string, Set<(value: any) => void>> = new Map();
 
@@ -86,6 +89,15 @@ class MMKVWeb {
     // Store in memory cache for synchronous access
     memoryCache.set(key, value);
     this.notifyListeners(key, value);
+    
+    // Notify global listeners
+    globalListeners.forEach(listener => {
+      try {
+        listener(key);
+      } catch (err) {
+        console.error('[MMKV] Error in global listener:', err);
+      }
+    });
     
     // Limit memory cache size - if it grows too large, clear it
     // This prevents OOM errors during long-running operations
@@ -243,9 +255,11 @@ class MMKVWeb {
   }
 
   addOnValueChangedListener(callback: (key: string) => void): { remove: () => void } {
+    globalListeners.add(callback);
+    
     return {
       remove: () => {
-        // Cleanup
+        globalListeners.delete(callback);
       }
     };
   }

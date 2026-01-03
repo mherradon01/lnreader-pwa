@@ -344,6 +344,7 @@ const ReaderUI = () => {
     TTSController(),
     ModalWrapper(),
     Footer(),
+    ChapterEnding(),
   );
 };
 
@@ -356,21 +357,8 @@ const initReaderUI = () => {
   }
 };
 
-const initChapterEnding = () => {
-  const chapterElement = document.getElementById('LNReader-chapter');
-  if (chapterElement) {
-    van.add(chapterElement, ChapterEnding());
-  } else {
-    console.warn('LNReader-chapter element not found');
-  }
-};
-
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    initReaderUI();
-    initChapterEnding();
-  });
+  document.addEventListener('DOMContentLoaded', initReaderUI);
 } else {
   initReaderUI();
-  initChapterEnding();
 }

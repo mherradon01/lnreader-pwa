@@ -7,12 +7,32 @@ const WebViewComponent = forwardRef((props, ref) => {
 
   useImperativeHandle(ref, () => ({
     injectJavaScript: (script) => {
-      if (iframeRef.current && iframeRef.current.contentWindow) {
-        try {
-          iframeRef.current.contentWindow.eval(script);
-        } catch (error) {
-          console.error('[WebView] Failed to inject JavaScript:', error);
-        }
+      if (!iframeRef.current || !iframeRef.current.contentWindow) {
+        return;
+      }
+      
+      if (!isReady.current) {
+        // Queue the script to run after iframe is ready
+        const checkAndRun = () => {
+          if (isReady.current && iframeRef.current?.contentWindow) {
+            try {
+              iframeRef.current.contentWindow.eval(`(function() { ${script} })();`);
+            } catch (error) {
+              console.error('[WebView] Failed to inject queued JavaScript:', error);
+            }
+          } else {
+            setTimeout(checkAndRun, 50);
+          }
+        };
+        checkAndRun();
+        return;
+      }
+      
+      try {
+        // Wrap in IIFE to avoid scope issues
+        iframeRef.current.contentWindow.eval(`(function() { ${script} })();`);
+      } catch (error) {
+        console.error('[WebView] Failed to inject JavaScript:', error, 'Script:', script);
       }
     },
     goBack: () => {
@@ -48,8 +68,38 @@ const WebViewComponent = forwardRef((props, ref) => {
     const iframe = iframeRef.current;
     if (!iframe) return;
 
+    // Listen for messages from iframe
+    const handleMessage = (event) => {
+      if (event.data?.type === 'iframe-message') {
+        props.onMessage?.({
+          nativeEvent: {
+            data: typeof event.data.data === 'string' ? event.data.data : JSON.stringify(event.data.data),
+          },
+        });
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+
     const handleLoad = () => {
       isReady.current = true;
+
+      // Inject ReactNativeWebView bridge (fallback if not in HTML)
+      try {
+        if (iframe.contentWindow && !iframe.contentWindow.ReactNativeWebView) {
+          iframe.contentWindow.ReactNativeWebView = {
+            postMessage: (data) => {
+              props.onMessage?.({
+                nativeEvent: {
+                  data: typeof data === 'string' ? data : JSON.stringify(data),
+                },
+              });
+            },
+          };
+        }
+      } catch (error) {
+        console.error('[WebView] Failed to inject ReactNativeWebView:', error);
+      }
 
       // Flush queued messages
       if (messageQueue.current.length > 0) {
@@ -63,7 +113,7 @@ const WebViewComponent = forwardRef((props, ref) => {
         messageQueue.current = [];
       }
 
-      // Set up message listener in iframe
+      // Set up message listener in iframe (legacy support)
       try {
         if (iframe.contentWindow) {
           iframe.contentWindow.addEventListener('message', (event) => {
@@ -83,7 +133,10 @@ const WebViewComponent = forwardRef((props, ref) => {
     };
 
     iframe.addEventListener('load', handleLoad);
-    return () => iframe.removeEventListener('load', handleLoad);
+    return () => {
+      iframe.removeEventListener('load', handleLoad);
+      window.removeEventListener('message', handleMessage);
+    };
   }, [props]);
 
   const iframeStyle = {
@@ -95,7 +148,20 @@ const WebViewComponent = forwardRef((props, ref) => {
 
   // If source is HTML, use blob URL
   if (props.source?.html) {
-    const blob = new Blob([props.source.html], { type: 'text/html' });
+    // Inject base tag to allow relative URLs to work from blob
+    const baseUrl = window.location.origin + '/';
+    let htmlWithBase = props.source.html;
+    
+    // Add base tag after <head> if it exists, or at the start of HTML
+    if (htmlWithBase.includes('<head>')) {
+      htmlWithBase = htmlWithBase.replace('<head>', `<head><base href="${baseUrl}">`);
+    } else if (htmlWithBase.includes('<html>')) {
+      htmlWithBase = htmlWithBase.replace('<html>', `<html><head><base href="${baseUrl}"></head>`);
+    } else {
+      htmlWithBase = `<base href="${baseUrl}">` + htmlWithBase;
+    }
+    
+    const blob = new Blob([htmlWithBase], { type: 'text/html' });
     const objectUrl = URL.createObjectURL(blob);
     
     useEffect(() => {

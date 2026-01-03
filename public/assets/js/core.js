@@ -85,26 +85,13 @@ window.reader = new (function () {
       settings.fontFamily,
     );
     if (settings.fontFamily) {
-      // Use /assets/fonts for web, file:/// for native
-      const isBrowser = typeof window !== 'undefined' && window.location && 
-        (window.location.protocol === 'http:' || window.location.protocol === 'https:' || window.location.protocol === 'blob:');
-      const fontUrl = isBrowser 
-        ? `/assets/fonts/${settings.fontFamily}.ttf`
-        : `file:///android_asset/fonts/${settings.fontFamily}.ttf`;
-      
-      console.log('[Reader] Font loading - isBrowser:', isBrowser, 'protocol:', window.location?.protocol, 'url:', fontUrl);
-      
       new FontFace(
         settings.fontFamily,
-        `url("${fontUrl}")`,
+        'url("file:///android_asset/fonts/' + settings.fontFamily + '.ttf")',
       )
         .load()
         .then(function (loadedFont) {
           document.fonts.add(loadedFont);
-          console.log('[Reader] Font loaded successfully:', settings.fontFamily);
-        })
-        .catch(function(err) {
-          console.warn('[Reader] Failed to load font ' + settings.fontFamily + ':', err);
         });
     } else {
       // have no affect with a font declared in head

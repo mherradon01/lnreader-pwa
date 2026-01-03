@@ -243,9 +243,10 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
           // Update WebView settings
           webViewRef.current?.injectJavaScript(
             `
-            reader.readerSettings.val = ${MMKVStorage.getString(
+            const newSettings = ${MMKVStorage.getString(
               CHAPTER_READER_SETTINGS,
             )};
+            reader.readerSettings.val = newSettings;
             // Auto-restart TTS if currently reading
             if (window.tts && tts.reading) {
               const currentElement = tts.currentElement;
@@ -495,6 +496,18 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
           <html>
             <head>
               <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+              <script>
+                // Inject ReactNativeWebView bridge early so it's available for all scripts
+                window.ReactNativeWebView = {
+                  postMessage: (data) => {
+                    window.parent.postMessage({
+                      type: 'iframe-message',
+                      data: data
+                    }, '*');
+                  }
+                };
+                console.log('[HTML] ReactNativeWebView bridge created');
+              </script>
               <link rel="stylesheet" href="${assetsUriPrefix}/css/index.css">
               <link rel="stylesheet" href="${assetsUriPrefix}/css/pageReader.css">
               <link rel="stylesheet" href="${assetsUriPrefix}/css/toolWrapper.css">
