@@ -145,7 +145,24 @@ const fetchPlugins = async (): Promise<PluginItem[]> => {
   }
 
   const repoPluginsRes = await Promise.allSettled(
-    allRepositories.map(({ url }) => proxyFetch(url).then(res => res.json())),
+    allRepositories.map(async ({ url }) => {
+      const response = await proxyFetch(url);
+      const contentType = response.headers.get('content-type');
+      
+      // Check if response is actually JSON
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('[fetchPlugins] Non-JSON response:', {
+          url,
+          contentType,
+          status: response.status,
+          textPreview: text.substring(0, 200),
+        });
+        throw new Error(`Expected JSON but received ${contentType || 'unknown content type'}`);
+      }
+      
+      return response.json();
+    }),
   );
 
   repoPluginsRes.forEach((repoPlugins, index) => {
