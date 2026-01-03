@@ -46,6 +46,7 @@ export default function useChapter(
     markChapterRead,
     updateChapterProgress,
     chapterTextCache,
+    deleteChapter,
   } = useNovelContext();
   const [hidden, setHidden] = useState(true);
   const [chapter, setChapter] = useState(initialChapter);
@@ -228,15 +229,18 @@ export default function useChapter(
           // a relative number
           markChapterRead(chapter.id);
           updateTracker();
+          // Delete chapter from database after reading
+          deleteChapter(chapter);
         }
       }
     },
     [
-      chapter.id,
+      chapter,
       incognitoMode,
       markChapterRead,
       updateChapterProgress,
       updateTracker,
+      deleteChapter,
     ],
   );
 
