@@ -152,6 +152,7 @@ module.exports = (env, argv) => {
         'react-native-mmkv': path.resolve(__dirname, 'shims/react-native-mmkv.web.ts'),
         'react-native-lottie-splash-screen': path.resolve(__dirname, 'shims/react-native-lottie-splash-screen.web.ts'),
         'react-native-background-actions': path.resolve(__dirname, 'shims/react-native-background-actions.web.ts'),
+        '@react-native-google-signin/google-signin': path.resolve(__dirname, 'shims/react-native-google-signin.web.ts'),
         '@react-native-documents/picker': path.resolve(__dirname, 'shims/react-native-documents-picker.web.ts'),
         '@react-native-vector-icons/get-image': path.resolve(__dirname, 'shims/react-native-vector-icons-get-image.web.js'),
         '@react-native-cookies/cookies': path.resolve(__dirname, 'shims/react-native-cookies.web.ts'),
@@ -280,6 +281,7 @@ module.exports = (env, argv) => {
                     '@api': './src/api',
                     '@type': './src/type',
                     '@specs': './specs',
+                    '@react-native-google-signin/google-signin': './shims/react-native-google-signin.web.ts',
                     'react-native-vector-icons/MaterialCommunityIcons': '@react-native-vector-icons/material-design-icons',
                   },
                 }],
@@ -316,6 +318,7 @@ module.exports = (env, argv) => {
         __DEV__: JSON.stringify(isDev),
         'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production'),
         'process.env.EXPO_OS': JSON.stringify('web'),
+        'process.env.GOOGLE_CLIENT_ID': JSON.stringify(process.env.GOOGLE_CLIENT_ID || ''),
       }),
       new webpack.ProvidePlugin({
         process: 'process/browser',
