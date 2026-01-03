@@ -27,8 +27,8 @@ export const proxyUrl = (url: string): string => {
   if (url.includes('raw.githubusercontent.com')) {
     // Extract the path after the domain
     const path = url.replace('https://raw.githubusercontent.com/', '');
-    // Use appropriate proxy based on environment
-    return isDev ? `/github-proxy/${path}` : `/api/github-proxy/${path}`;
+    // Dev: use path-based proxy, Prod: use query param based proxy
+    return isDev ? `/github-proxy/${path}` : `/api/github-proxy?path=${encodeURIComponent(path)}`;
   }
 
   // For other cross-origin URLs on web, use a generic CORS proxy

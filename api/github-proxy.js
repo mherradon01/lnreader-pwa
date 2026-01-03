@@ -10,12 +10,10 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    // Reconstruct the full GitHub URL from the path
-    // API route: /api/github-proxy/[...path]
-    // This forwards to: https://raw.githubusercontent.com/[path]
-    const path = (req.query.path || []).join('/');
+    // Get the path from query parameter
+    const { path } = req.query;
 
-    if (!path) {
+    if (!path || typeof path !== 'string') {
       return res.status(400).json({ error: 'Missing path parameter' });
     }
 

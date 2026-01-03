@@ -147,21 +147,35 @@ const fetchPlugins = async (): Promise<PluginItem[]> => {
   const repoPluginsRes = await Promise.allSettled(
     allRepositories.map(async ({ url }) => {
       const response = await proxyFetch(url);
-      const contentType = response.headers.get('content-type');
+      const contentType = response.headers.get('content-type') || '';
       
-      // Check if response is actually JSON
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        console.error('[fetchPlugins] Non-JSON response:', {
+      // Get response text once
+      const text = await response.text();
+      
+      // Check if it looks like HTML (error page)
+      if (text.trim().startsWith('<!') || text.trim().startsWith('<html')) {
+        console.error('[fetchPlugins] Received HTML instead of JSON:', {
           url,
           contentType,
           status: response.status,
           textPreview: text.substring(0, 200),
         });
-        throw new Error(`Expected JSON but received ${contentType || 'unknown content type'}`);
+        throw new Error(`Received HTML error page instead of JSON (status: ${response.status})`);
       }
       
-      return response.json();
+      // Try to parse as JSON
+      try {
+        return JSON.parse(text);
+      } catch (err) {
+        console.error('[fetchPlugins] Failed to parse JSON:', {
+          url,
+          contentType,
+          status: response.status,
+          textPreview: text.substring(0, 200),
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+        throw new Error(`Failed to parse repository response as JSON: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      }
     }),
   );
 

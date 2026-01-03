@@ -13,6 +13,7 @@ import AppErrorBoundary, {
   ErrorFallback,
 } from '@components/AppErrorBoundary/AppErrorBoundary';
 import { useDatabaseInitialization } from '@hooks';
+import { useWebSafeAreaInsets } from '@hooks/useWebSafeAreaInsets.web';
 
 import Main from './src/navigators/Main';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -23,6 +24,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 const App = () => {
   const { isDbReady, dbError, retryInitialization } =
     useDatabaseInitialization();
+  const webInsets = useWebSafeAreaInsets();
 
   useEffect(() => {
     // Hide splash screen on web
@@ -46,7 +48,12 @@ const App = () => {
 
   return (
     <GestureHandlerRootView style={styles.flex}>
-      <SafeAreaProvider>
+      <SafeAreaProvider
+        initialMetrics={{
+          frame: { x: 0, y: 0, width: 0, height: 0 },
+          insets: webInsets,
+        }}
+      >
         <AppErrorBoundary>
           <PaperProvider>
             <BottomSheetModalProvider>
