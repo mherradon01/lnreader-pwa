@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'lodash-es';
 
 import { NovelItem, PluginItem } from '@plugins/types';
-import { getPlugin } from '@plugins/pluginManager';
+import { getPlugin, loadPlugin } from '@plugins/pluginManager';
 import { useBrowseSettings, usePlugins } from '@hooks/persisted';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -25,6 +25,7 @@ export const useGlobalSearch = ({
   const isMounted = useRef(true); //if user closes the search screen, cancel the search
   const isFocused = useRef(true); //if the user opens a sub-screen (e.g. novel screen), pause the search
   const lastSearch = useRef(''); //if the user changes search, cancel running searches
+  const lastEffectSearch = useRef(''); //track last search triggered by effect to prevent duplicates
   useEffect(
     () => () => {
       isMounted.current = false;
@@ -48,10 +49,18 @@ export const useGlobalSearch = ({
 
   const globalSearch = useCallback(
     (searchText: string) => {
-      if (lastSearch.current === searchText) {
+      if (!searchText || lastSearch.current === searchText) {
         return;
       }
       lastSearch.current = searchText;
+      
+      // If no plugins are installed, set empty results
+      if (filteredInstalledPlugins.length === 0) {
+        setSearchResults([]);
+        setProgress(0);
+        return;
+      }
+      
       const defaultResult: GlobalSearchResult[] = filteredInstalledPlugins.map(
         plugin => ({
           isLoading: true,
@@ -68,37 +77,56 @@ export const useGlobalSearch = ({
 
       async function searchInPlugin(_plugin: PluginItem) {
         try {
-          const plugin = getPlugin(_plugin.id);
+          // Try sync getPlugin first (cached), fallback to async loadPlugin for web
+          let plugin = getPlugin(_plugin.id);
           if (!plugin) {
-            throw new Error(`Unknown plugin: ${_plugin.id}`);
+            console.log('[GlobalSearch] Plugin not in cache, loading:', _plugin.id);
+            plugin = await loadPlugin(_plugin.id);
           }
+          if (!plugin) {
+            console.error('[GlobalSearch] Failed to load plugin:', _plugin.id);
+            throw new Error(`Failed to load plugin: ${_plugin.name}`);
+          }
+          console.log('[GlobalSearch] Searching in plugin:', _plugin.id);
           const res = await plugin.searchNovels(searchText, 1);
+          console.log('[GlobalSearch] Search results for', _plugin.id, ':', res.length, 'novels');
 
-          setSearchResults(prevState =>
-            prevState
-              .map(prevResult =>
-                prevResult.plugin.id === plugin.id
-                  ? { ...prevResult, novels: res, isLoading: false }
-                  : { ...prevResult },
-              )
-              .sort(novelResultSorter),
-          );
+          try {
+            setSearchResults(prevState =>
+              prevState
+                .map(prevResult =>
+                  prevResult.plugin.id === _plugin.id
+                    ? { ...prevResult, novels: res, isLoading: false }
+                    : { ...prevResult },
+                )
+                .sort(novelResultSorter),
+            );
+          } catch (stateError: any) {
+            console.error('[GlobalSearch] Error updating state for plugin:', _plugin.id, stateError);
+            throw stateError;
+          }
         } catch (error: any) {
+          console.error('[GlobalSearch] Error searching in plugin:', _plugin.id, error);
           const errorMessage = error?.message || String(error);
-          setSearchResults(prevState =>
-            prevState
-              .map(prevResult =>
-                prevResult.plugin.id === _plugin.id
-                  ? {
-                      ...prevResult,
-                      novels: [],
-                      isLoading: false,
-                      error: errorMessage,
-                    }
-                  : { ...prevResult },
-              )
-              .sort(novelResultSorter),
-          );
+          try {
+            setSearchResults(prevState =>
+              prevState
+                .map(prevResult =>
+                  prevResult.plugin.id === _plugin.id
+                    ? {
+                        ...prevResult,
+                        novels: [],
+                        isLoading: false,
+                        error: errorMessage,
+                      }
+                    : { ...prevResult },
+                )
+                .sort(novelResultSorter),
+            );
+          } catch (stateError: any) {
+            console.error('[GlobalSearch] Error updating error state for plugin:', _plugin.id, stateError);
+            // Don't rethrow here - we want to continue with other plugins
+          }
         }
       }
 
@@ -127,8 +155,16 @@ export const useGlobalSearch = ({
                   );
                 }
               })
-              .catch(() => {
+              .catch((err) => {
+                console.error('[GlobalSearch] Unhandled error in searchInPlugin:', err);
                 running--;
+                // Still update progress even on error
+                if (lastSearch.current === searchText) {
+                  setProgress(
+                    prevState =>
+                      prevState + 1 / filteredInstalledPlugins.length,
+                  );
+                }
               });
           }
         } else {
@@ -139,7 +175,11 @@ export const useGlobalSearch = ({
             while (!isFocused.current) {
               await new Promise(resolve => setTimeout(resolve, 100));
             }
-            await searchInPlugin(_plugin);
+            try {
+              await searchInPlugin(_plugin);
+            } catch (err) {
+              console.error('[GlobalSearch] Unhandled error in searchInPlugin:', err);
+            }
             if (lastSearch.current === searchText) {
               setProgress(
                 prevState => prevState + 1 / filteredInstalledPlugins.length,
@@ -158,7 +198,8 @@ export const useGlobalSearch = ({
   );
 
   useEffect(() => {
-    if (defaultSearchText) {
+    if (defaultSearchText && defaultSearchText !== lastEffectSearch.current) {
+      lastEffectSearch.current = defaultSearchText;
       debouncedGlobalSearch(defaultSearchText);
     }
 
@@ -168,14 +209,18 @@ export const useGlobalSearch = ({
   }, [defaultSearchText, debouncedGlobalSearch]);
 
   const filteredSearchResults = useMemo(() => {
+    console.log('[GlobalSearch] Filtering results. Total:', searchResults.length, 'hasResultsOnly:', hasResultsOnly);
     if (!hasResultsOnly) {
       return searchResults;
     }
-    return searchResults.filter(
+    const filtered = searchResults.filter(
       result => !result.isLoading && !result.error && result.novels.length > 0,
     );
+    console.log('[GlobalSearch] Filtered results:', filtered.length);
+    return filtered;
   }, [searchResults, hasResultsOnly]);
 
+  console.log('[GlobalSearch] Returning searchResults:', filteredSearchResults.length, 'progress:', progress);
   return { searchResults: filteredSearchResults, globalSearch, progress };
 };
 

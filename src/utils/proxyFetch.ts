@@ -59,15 +59,6 @@ export const proxyFetch = (
 ): Promise<Response> => {
   const proxiedUrl = proxyUrl(url);
   
-  // Log for debugging on web
-  if (Platform.OS === 'web' && proxiedUrl !== url) {
-    console.log('[proxyFetch]', {
-      original: url,
-      proxied: proxiedUrl,
-      hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
-    });
-  }
-  
   // Don't add custom headers that might trigger preflight requests
   // The proxy server will handle CORS headers properly
   return fetch(proxiedUrl, options);

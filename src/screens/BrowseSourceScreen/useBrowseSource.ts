@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { NovelItem } from '@plugins/types';
 
-import { getPlugin } from '@plugins/pluginManager';
+import { getPlugin, loadPlugin } from '@plugins/pluginManager';
 import { FilterToValues, Filters } from '@plugins/types/filterTypes';
 
 export const useBrowseSource = (
@@ -27,7 +27,11 @@ export const useBrowseSource = (
     async (page: number, filters?: FilterToValues<Filters>) => {
       if (isScreenMounted.current === true) {
         try {
-          const plugin = getPlugin(pluginId);
+          let plugin = getPlugin(pluginId);
+          // If plugin not in cache, try async load
+          if (!plugin) {
+            plugin = await loadPlugin(pluginId);
+          }
           if (!plugin) {
             throw new Error(`Unknown plugin: ${pluginId}`);
           }
@@ -131,7 +135,11 @@ export const useSearchSource = (pluginId: string) => {
     async (localSearchText: string, page: number) => {
       if (isScreenMounted.current === true) {
         try {
-          const plugin = getPlugin(pluginId);
+          let plugin = getPlugin(pluginId);
+          // If plugin not in cache, try async load
+          if (!plugin) {
+            plugin = await loadPlugin(pluginId);
+          }
           if (!plugin) {
             throw new Error(`Unknown plugin: ${pluginId}`);
           }
