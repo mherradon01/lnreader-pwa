@@ -23,6 +23,7 @@ import { showToast } from '@utils/showToast';
 import { PLUGIN_STORAGE } from '@utils/Storages';
 import NativeFile from '@specs/NativeFile';
 import { getUserAgent } from '@hooks/persisted/useUserAgent';
+import { getMMKVObject, setMMKVObject } from '@utils/mmkv/mmkv';
 
 const packages: Record<string, any> = {
   'htmlparser2': { Parser },
@@ -115,6 +116,19 @@ const installPlugin = async (
       NativeFile.unlink(customCSSPath);
     }
     await NativeFile.writeFile(pluginPath, rawCode);
+    
+    // Update the INSTALL_PLUGINS list in MMKV so UI shows it as installed
+    const installedPlugins = getMMKVObject<PluginItem[]>('INSTALL_PLUGINS') || [];
+    const pluginToAdd: PluginItem = {
+      ..._plugin,
+      version: currentPlugin.version,
+      hasSettings: !!currentPlugin.pluginSettings,
+    };
+    // Only add if not already present
+    if (!installedPlugins.some(p => p.id === pluginToAdd.id)) {
+      installedPlugins.push(pluginToAdd);
+      setMMKVObject('INSTALL_PLUGINS', installedPlugins);
+    }
   }
   return currentPlugin;
 };

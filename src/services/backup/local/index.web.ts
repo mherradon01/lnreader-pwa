@@ -315,13 +315,10 @@ export const restoreBackup = async (
       (async () => {
         try {
           const { installPlugin } = await import('@plugins/pluginManager');
-          const { getMMKVObject, setMMKVObject } = await import('@utils/mmkv/mmkv');
-          const INSTALLED_PLUGINS = 'INSTALL_PLUGINS';
           // eslint-disable-next-line no-console
           console.log('[Local Restore] installPlugin imported successfully');
           
           let installed = 0;
-          const successfullyInstalled: any[] = [];
           for (const plugin of pluginsToInstall) {
             try {
               // eslint-disable-next-line no-console
@@ -329,12 +326,6 @@ export const restoreBackup = async (
               const installedPlugin = await installPlugin(plugin);
               if (installedPlugin) {
                 installed++;
-                // Track successfully installed plugin with updated version info
-                successfullyInstalled.push({
-                  ...plugin,
-                  version: installedPlugin.version,
-                  hasSettings: !!installedPlugin.pluginSettings,
-                });
                 // eslint-disable-next-line no-console
                 console.log(`[Local Restore] Successfully installed: ${plugin.id}`);
               }
@@ -342,20 +333,6 @@ export const restoreBackup = async (
               // eslint-disable-next-line no-console
               console.error('[Local Restore] Failed to install plugin:', plugin.id, error);
             }
-          }
-          
-          // Update the INSTALL_PLUGINS list in MMKV so UI shows them as installed
-          if (successfullyInstalled.length > 0) {
-            const currentInstalled = getMMKVObject<any[]>(INSTALLED_PLUGINS) || [];
-            const newInstalled = [...currentInstalled];
-            for (const plugin of successfullyInstalled) {
-              if (!newInstalled.some(p => p.id === plugin.id)) {
-                newInstalled.push(plugin);
-              }
-            }
-            setMMKVObject(INSTALLED_PLUGINS, newInstalled);
-            // eslint-disable-next-line no-console
-            console.log('[Local Restore] Updated INSTALL_PLUGINS list:', newInstalled.map(p => p.id));
           }
           
           // eslint-disable-next-line no-console
