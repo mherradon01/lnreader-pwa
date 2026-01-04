@@ -34,12 +34,18 @@ export const getWebSafeCoverUri = async (coverUri: string | undefined | null): P
       // Remove file:// prefix and query params for reading
       const filePath = coverUri.replace(/^file:\/\//, '').split('?')[0];
       
-      // Read the file from IndexedDB with metadata
+      // Read the file from IndexedDB with metadata - open without version to use current
       const database = await (async () => {
         return new Promise<IDBDatabase>((resolve, reject) => {
-          const request = indexedDB.open('LNReaderFileSystem', 1);
+          const request = indexedDB.open('LNReaderFileSystem');
           request.onsuccess = () => resolve(request.result);
           request.onerror = () => reject(request.error);
+          request.onupgradeneeded = (event) => {
+            const db = (event.target as IDBOpenDBRequest).result;
+            if (!db.objectStoreNames.contains('files')) {
+              db.createObjectStore('files', { keyPath: 'path' });
+            }
+          };
         });
       })();
 

@@ -320,6 +320,7 @@ const restoreObjectQuery = (table: string, obj: any) => {
 export const _restoreNovelAndChapters = async (backupNovel: BackupNovel) => {
   const { chapters, ...novel } = backupNovel;
   await runAsync([
+    ['DELETE FROM Chapter WHERE novelId = ?', [novel.id]],
     ['DELETE FROM Novel WHERE id = ?', [novel.id]],
     [
       restoreObjectQuery('Novel', novel),

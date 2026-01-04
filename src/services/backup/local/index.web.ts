@@ -1,30 +1,26 @@
-import { DriveFile } from '@api/drive/types';
+import { showToast } from '@utils/showToast';
 import { getString } from '@strings/translations';
 import ServiceManager, { BackgroundTaskMetadata } from '@services/ServiceManager';
-import { exists, createFile } from '@api/drive';
-import { downloadFileJson } from '@api/drive/request';
 import { MMKVStorage } from '@utils/mmkv/mmkv';
 import { getAllNovels, _restoreNovelAndChapters } from '@database/queries/NovelQueries';
 import { getNovelChapters } from '@database/queries/ChapterQueries';
 import { getAllNovelCategories, getCategoriesFromDb, _restoreCategory } from '@database/queries/CategoryQueries';
 import { getRepositoriesFromDb } from '@database/queries/RepositoryQueries';
 import { BackupCategory, BackupNovel } from '@database/types';
-import { showToast } from '@utils/showToast';
 import packageJson from '../../../../package.json';
 import { SELF_HOST_BACKUP } from '@hooks/persisted/useSelfHost';
 import { OLD_TRACKED_NOVEL_PREFIX } from '@hooks/persisted/migrations/trackerMigration';
 import { LAST_UPDATE_TIME } from '@hooks/persisted/useUpdates';
 import { db } from '@database/db';
 
-// Web-specific backup: export data as JSON files instead of zips
-export const createDriveBackup = async (
-  backupFolder: DriveFile,
-  setMeta: (
+// Web-specific backup: use browser APIs
+export const createBackup = async (
+  setMeta?: (
     transformer: (meta: BackgroundTaskMetadata) => BackgroundTaskMetadata,
   ) => void,
 ) => {
   try {
-    setMeta(meta => ({
+    setMeta?.(meta => ({
       ...meta,
       isRunning: true,
       progress: 0 / 4,
@@ -52,7 +48,7 @@ export const createDriveBackup = async (
       }
     }
 
-    setMeta(meta => ({
+    setMeta?.(meta => ({
       ...meta,
       progress: 1 / 4,
       progressText: 'Exporting novels...',
@@ -69,7 +65,7 @@ export const createDriveBackup = async (
       });
     }
 
-    setMeta(meta => ({
+    setMeta?.(meta => ({
       ...meta,
       progress: 2 / 4,
       progressText: 'Exporting categories...',
@@ -79,7 +75,9 @@ export const createDriveBackup = async (
     const categories = await getCategoriesFromDb();
     const novelCategories = await getAllNovelCategories();
     const backupCategories: BackupCategory[] = categories.map(category => ({
-      ...category,
+      id: category.id,
+      name: category.name,
+      sort: category.sort,
       novelIds: novelCategories
         .filter(nc => nc.categoryId === category.id)
         .map(nc => nc.novelId),
@@ -88,13 +86,13 @@ export const createDriveBackup = async (
     // Step 3.5: Export repositories
     const repositories = getRepositoriesFromDb();
 
-    setMeta(meta => ({
+    setMeta?.(meta => ({
       ...meta,
       progress: 3 / 4,
-      progressText: getString('backupScreen.uploadingData'),
+      progressText: getString('backupScreen.savingBackup'),
     }));
 
-    // Step 4: Create backup files in Google Drive
+    // Step 4: Create backup file and download using browser API
     const backupData = {
       version: packageJson.version,
       date: new Date().toISOString(),
@@ -104,105 +102,100 @@ export const createDriveBackup = async (
       repositories: repositories,
     };
 
-    // Upload as single JSON file
-    const settingsFileName = 'backup.json';
-    const existingFile = await exists(settingsFileName, false, backupFolder.id);
+    // Create a downloadable file
+    const jsonStr = JSON.stringify(backupData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const datetime = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const fileName = `lnreader_backup_${datetime}.json`;
     
-    if (existingFile) {
-      // For now, just create a new file with timestamp
-      // In the future, we could update the existing file
-      const timestamp = new Date().getTime();
-      await createFile(
-        `backup-${timestamp}.json`,
-        'application/json',
-        JSON.stringify(backupData, null, 2),
-        backupFolder.id,
-      );
-    } else {
-      await createFile(
-        settingsFileName,
-        'application/json',
-        JSON.stringify(backupData, null, 2),
-        backupFolder.id,
-      );
-    }
+    // Trigger download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
-    setMeta(meta => ({
+    setMeta?.(meta => ({
       ...meta,
       progress: 4 / 4,
       isRunning: false,
     }));
 
-    showToast(getString('backupScreen.backupComplete'));
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Backup error:', error);
-    showToast(`Backup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    setMeta(meta => ({
+    showToast(getString('backupScreen.backupCreated'));
+  } catch (error: any) {
+    setMeta?.(meta => ({
       ...meta,
       isRunning: false,
     }));
+    showToast(error instanceof Error ? error.message : 'Backup failed');
   }
 };
 
-export const driveRestore = async (
-  backupFolder: DriveFile,
-  setMeta: (
+export const restoreBackup = async (
+  setMeta?: (
     transformer: (meta: BackgroundTaskMetadata) => BackgroundTaskMetadata,
   ) => void,
 ) => {
   try {
-    // eslint-disable-next-line no-console
-    console.log('[Drive Restore] Starting restore process for folder:', backupFolder);
-    
-    setMeta(meta => ({
+    setMeta?.(meta => ({
       ...meta,
       isRunning: true,
-      progress: 0 / 3,
+      progress: 0 / 4,
       progressText: getString('backupScreen.downloadingData'),
     }));
 
-    // Find the backup file
-    // eslint-disable-next-line no-console
-    console.log('[Drive Restore] Searching for backup.json in folder:', backupFolder.id);
-    const backupFile = await exists('backup.json', false, backupFolder.id);
+    // Use browser file picker
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json,.json';
     
-    // eslint-disable-next-line no-console
-    console.log('[Drive Restore] Backup file found:', backupFile);
-    
-    if (!backupFile) {
-      throw new Error('Backup file not found in the selected folder');
-    }
+    const fileSelected = new Promise<File>((resolve, reject) => {
+      input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          resolve(file);
+        } else {
+          reject(new Error('No file selected'));
+        }
+      };
+      input.oncancel = () => {
+        reject(new Error('File selection cancelled'));
+      };
+    });
 
-    // Download and parse backup data
-    // eslint-disable-next-line no-console
-    console.log('[Drive Restore] Downloading backup file...');
-    const backupData = await downloadFileJson<{
+    input.click();
+    const file = await fileSelected;
+
+    setMeta?.(meta => ({
+      ...meta,
+      progress: 1 / 4,
+      progressText: 'Reading backup file...',
+    }));
+
+    // Read the file
+    const text = await file.text();
+    const backupData = JSON.parse(text) as {
       settings: Record<string, any>;
       novels: BackupNovel[];
       categories: BackupCategory[];
       repositories?: Array<{id: number; url: string}>;
-    }>(backupFile);
+    };
 
-    // eslint-disable-next-line no-console
-    console.log('[Drive Restore] Backup data loaded:', {
-      settingsCount: Object.keys(backupData.settings || {}).length,
-      novelsCount: backupData.novels?.length || 0,
-      categoriesCount: backupData.categories?.length || 0,
-    });
-
-    setMeta(meta => ({
+    setMeta?.(meta => ({
       ...meta,
-      progress: 1 / 3,
+      progress: 2 / 4,
       progressText: 'Restoring settings...',
     }));
 
     // Debug: Log all settings keys
     // eslint-disable-next-line no-console
-    console.log('[Drive Restore] All settings keys in backup:', Object.keys(backupData.settings || {}));
+    console.log('[Local Restore] All settings keys in backup:', Object.keys(backupData.settings || {}));
     // eslint-disable-next-line no-console
-    console.log('[Drive Restore] Checking for installed_plugins key...');
-
+    console.log('[Local Restore] Checking for installed_plugins key...');
+    
     // Extract installed plugins before restoring settings
     let pluginsToInstall: any[] = [];
     
@@ -221,7 +214,7 @@ export const driveRestore = async (
       if (backupData.settings?.[key]) {
         foundKey = key;
         // eslint-disable-next-line no-console
-        console.log(`[Drive Restore] Found plugins under key: ${key}`);
+        console.log(`[Local Restore] Found plugins under key: ${key}`);
         break;
       }
     }
@@ -230,62 +223,50 @@ export const driveRestore = async (
       try {
         const installedPlugins = backupData.settings[foundKey];
         // eslint-disable-next-line no-console
-        console.log('[Drive Restore] Raw installed plugins value:', typeof installedPlugins, installedPlugins);
+        console.log('[Local Restore] Raw installed plugins value:', typeof installedPlugins, installedPlugins);
         
         pluginsToInstall = typeof installedPlugins === 'string' 
           ? JSON.parse(installedPlugins) 
           : installedPlugins;
         
         // eslint-disable-next-line no-console
-        console.log(`[Drive Restore] Found ${pluginsToInstall.length} plugins to re-install`);
+        console.log('[Local Restore] Parsed plugins:', pluginsToInstall);
         
         // Remove installed plugins from settings so they don't appear as installed yet
         delete backupData.settings[foundKey];
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.error('[Drive Restore] Failed to parse installed plugins:', error);
+        console.error('[Local Restore] Failed to parse installed plugins:', error);
       }
     } else {
       // eslint-disable-next-line no-console
-      console.log('[Drive Restore] No installed plugins key found in settings');
+      console.log('[Local Restore] No installed plugins key found in settings');
     }
 
     // Restore settings (without installed plugins)
     if (backupData.settings) {
-      // eslint-disable-next-line no-console
-      console.log('[Drive Restore] Restoring settings...');
       for (const [key, value] of Object.entries(backupData.settings)) {
-        if (typeof value === 'string') {
-          MMKVStorage.set(key, value);
-        } else if (typeof value === 'boolean') {
+        if (typeof value === 'string' || typeof value === 'boolean') {
           MMKVStorage.set(key, value);
         }
       }
-      // eslint-disable-next-line no-console
-      console.log('[Drive Restore] Settings restored');
     }
 
-    setMeta(meta => ({
+    setMeta?.(meta => ({
       ...meta,
-      progress: 2 / 3,
+      progress: 3 / 4,
       progressText: 'Restoring novels and chapters...',
     }));
 
     // Restore novels and chapters
     if (backupData.novels) {
-      // eslint-disable-next-line no-console
-      console.log(`[Drive Restore] Restoring ${backupData.novels.length} novels...`);
       for (const novel of backupData.novels) {
         await _restoreNovelAndChapters(novel);
       }
-      // eslint-disable-next-line no-console
-      console.log('[Drive Restore] Novels restored');
     }
 
     // Restore categories
     if (backupData.categories) {
-      // eslint-disable-next-line no-console
-      console.log(`[Drive Restore] Restoring ${backupData.categories.length} categories...`);
       for (const category of backupData.categories) {
         // Handle old backup format where novelIds might be a string or null
         const novelIds = category.novelIds;
@@ -299,14 +280,10 @@ export const driveRestore = async (
         };
         await _restoreCategory(normalizedCategory);
       }
-      // eslint-disable-next-line no-console
-      console.log('[Drive Restore] Categories restored');
     }
 
     // Restore repositories
     if (backupData.repositories && Array.isArray(backupData.repositories)) {
-      // eslint-disable-next-line no-console
-      console.log(`[Drive Restore] Restoring ${backupData.repositories.length} repositories...`);
       for (const repo of backupData.repositories) {
         try {
           db.runSync('INSERT OR REPLACE INTO Repository (id, url) VALUES (?, ?)', [repo.id, repo.url]);
@@ -315,27 +292,23 @@ export const driveRestore = async (
           console.error('Failed to restore repository:', repo, error);
         }
       }
-      // eslint-disable-next-line no-console
-      console.log('[Drive Restore] Repositories restored');
     }
 
-    setMeta(meta => ({
+    setMeta?.(meta => ({
       ...meta,
-      progress: 3 / 3,
+      progress: 4 / 4,
       isRunning: false,
     }));
 
-    // eslint-disable-next-line no-console
-    console.log('[Drive Restore] Restore complete!');
-    showToast(getString('backupScreen.restoreComplete'));
+    showToast(getString('backupScreen.backupRestored'));
     
     // Re-install all plugins from their repositories immediately
     // eslint-disable-next-line no-console
-    console.log('[Drive Restore] Checking for plugins to install:', pluginsToInstall.length);
+    console.log('[Local Restore] Checking for plugins to install:', pluginsToInstall.length);
     
     if (Array.isArray(pluginsToInstall) && pluginsToInstall.length > 0) {
       // eslint-disable-next-line no-console
-      console.log('[Drive Restore] Starting plugin installation for:', pluginsToInstall.map(p => p.id));
+      console.log('[Local Restore] Starting plugin installation for:', pluginsToInstall.map(p => p.id));
       showToast(`Installing ${pluginsToInstall.length} plugins...`);
       
       // Run in background but start immediately
@@ -345,14 +318,14 @@ export const driveRestore = async (
           const { getMMKVObject, setMMKVObject } = await import('@utils/mmkv/mmkv');
           const INSTALLED_PLUGINS = 'INSTALL_PLUGINS';
           // eslint-disable-next-line no-console
-          console.log('[Drive Restore] installPlugin imported successfully');
+          console.log('[Local Restore] installPlugin imported successfully');
           
           let installed = 0;
           const successfullyInstalled: any[] = [];
           for (const plugin of pluginsToInstall) {
             try {
               // eslint-disable-next-line no-console
-              console.log(`[Drive Restore] Installing plugin: ${plugin.id}`);
+              console.log(`[Local Restore] Installing plugin: ${plugin.id}`);
               const installedPlugin = await installPlugin(plugin);
               if (installedPlugin) {
                 installed++;
@@ -363,11 +336,11 @@ export const driveRestore = async (
                   hasSettings: !!installedPlugin.pluginSettings,
                 });
                 // eslint-disable-next-line no-console
-                console.log(`[Drive Restore] Successfully installed: ${plugin.id}`);
+                console.log(`[Local Restore] Successfully installed: ${plugin.id}`);
               }
             } catch (error) {
               // eslint-disable-next-line no-console
-              console.error('[Drive Restore] Failed to install plugin:', plugin.id, error);
+              console.error('[Local Restore] Failed to install plugin:', plugin.id, error);
             }
           }
           
@@ -382,18 +355,18 @@ export const driveRestore = async (
             }
             setMMKVObject(INSTALLED_PLUGINS, newInstalled);
             // eslint-disable-next-line no-console
-            console.log('[Drive Restore] Updated INSTALL_PLUGINS list:', newInstalled.map(p => p.id));
+            console.log('[Local Restore] Updated INSTALL_PLUGINS list:', newInstalled.map(p => p.id));
           }
           
           // eslint-disable-next-line no-console
-          console.log(`[Drive Restore] Installation complete: ${installed}/${pluginsToInstall.length}`);
+          console.log(`[Local Restore] Installation complete: ${installed}/${pluginsToInstall.length}`);
           
           if (installed > 0) {
             showToast(`Successfully installed ${installed}/${pluginsToInstall.length} plugins`);
             
             // Trigger library update to re-download covers
             // eslint-disable-next-line no-console
-            console.log('[Drive Restore] Starting library update to refresh covers...');
+            console.log('[Local Restore] Starting library update to refresh covers...');
             showToast('Refreshing library covers...');
             
             try {
@@ -421,31 +394,35 @@ export const driveRestore = async (
               }, 5000);
               
               // eslint-disable-next-line no-console
-              console.log('[Drive Restore] Library update task added with metadata refresh enabled');
+              console.log('[Local Restore] Library update task added with metadata refresh enabled');
             } catch (error) {
               // eslint-disable-next-line no-console
-              console.error('[Drive Restore] Failed to start library update:', error);
+              console.error('[Local Restore] Failed to start library update:', error);
             }
           } else if (pluginsToInstall.length > 0) {
             showToast('Failed to install plugins. Check console for details.');
           }
         } catch (error) {
           // eslint-disable-next-line no-console
-          console.error('[Drive Restore] Failed during plugin installation:', error);
+          console.error('[Local Restore] Failed during plugin installation:', error);
           showToast('Plugin installation failed. Check console for details.');
         }
       })();
     } else {
       // eslint-disable-next-line no-console
-      console.log('[Drive Restore] No plugins to install');
+      console.log('[Local Restore] No plugins to install');
     }
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('[Drive Restore] Restore error:', error);
-    showToast(`Restore failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    setMeta(meta => ({
+  } catch (error: any) {
+    setMeta?.(meta => ({
       ...meta,
       isRunning: false,
     }));
+    
+    // Handle user cancellation gracefully
+    if (error.message === 'File selection cancelled') {
+      showToast('Restore cancelled');
+    } else {
+      showToast(error instanceof Error ? error.message : 'Restore failed');
+    }
   }
 };

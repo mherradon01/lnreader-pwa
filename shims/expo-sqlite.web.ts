@@ -429,6 +429,20 @@ class WebSQLiteDatabase {
     }
   }
 
+  // Alias for withTransactionAsync - web doesn't distinguish between exclusive and regular transactions
+  async withExclusiveTransactionAsync(callback: (tx: WebSQLiteDatabase) => Promise<void>): Promise<void> {
+    await this.init();
+    try {
+      this.db!.run('BEGIN EXCLUSIVE TRANSACTION');
+      await callback(this); // Pass 'this' as the transaction object
+      this.db!.run('COMMIT');
+      this.scheduleSave();
+    } catch (error) {
+      this.db!.run('ROLLBACK');
+      throw error;
+    }
+  }
+
   closeSync(): void {
     if (this.db) {
       // Persist before closing

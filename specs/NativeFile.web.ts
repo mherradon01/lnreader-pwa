@@ -9,17 +9,56 @@ const fileCache = new Map<string, string>();
 
 const initDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
+    // Check if db exists and is valid
     if (db) {
-      resolve(db);
-      return;
+      try {
+        // Try to access objectStoreNames to verify db is not closed
+        if (db.objectStoreNames.contains(STORE_NAME)) {
+          resolve(db);
+          return;
+        }
+      } catch (e) {
+        // Database is closed or invalid
+        db = null;
+      }
     }
 
-    const request = indexedDB.open(DB_NAME, 1);
+    // Open database without specifying version - will use current version or create with version 1
+    const request = indexedDB.open(DB_NAME);
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       db = request.result;
-      resolve(db);
+      
+      // Add close handler to reset db reference
+      db.onclose = () => {
+        db = null;
+      };
+      
+      // Verify the object store exists
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        // Object store doesn't exist, need to upgrade
+        const currentVersion = db.version;
+        db.close();
+        db = null;
+        
+        // Open with a higher version to trigger upgrade
+        const upgradeRequest = indexedDB.open(DB_NAME, currentVersion + 1);
+        upgradeRequest.onerror = () => reject(upgradeRequest.error);
+        upgradeRequest.onsuccess = () => {
+          db = upgradeRequest.result;
+          db.onclose = () => { db = null; };
+          resolve(db);
+        };
+        upgradeRequest.onupgradeneeded = (event) => {
+          const database = (event.target as IDBOpenDBRequest).result;
+          if (!database.objectStoreNames.contains(STORE_NAME)) {
+            database.createObjectStore(STORE_NAME, { keyPath: 'path' });
+          }
+        };
+      } else {
+        resolve(db);
+      }
     };
 
     request.onupgradeneeded = (event) => {
@@ -263,10 +302,13 @@ const NativeFile = {
     headers: { [key: string]: string } | Headers,
     body?: string,
   ): Promise<void> => {
-    // Proxy GitHub raw URLs to bypass CORS on web
+    // Proxy cross-origin URLs to bypass CORS on web
     let proxyUrl = url;
     if (url.includes('raw.githubusercontent.com')) {
       proxyUrl = url.replace('https://raw.githubusercontent.com', '/github-proxy');
+    } else if (url.startsWith('http://') || url.startsWith('https://')) {
+      // Use CORS proxy for all cross-origin HTTP(S) URLs
+      proxyUrl = '/cors-proxy?url=' + encodeURIComponent(url);
     }
 
     const response = await fetch(proxyUrl, {
