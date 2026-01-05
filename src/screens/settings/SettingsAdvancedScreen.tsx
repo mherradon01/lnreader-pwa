@@ -13,6 +13,7 @@ import {
   deleteReadChaptersFromDb,
   clearUpdates,
 } from '@database/queries/ChapterQueries';
+import { runDatabaseMaintenance } from '@database/queries/MaintenanceQueries';
 
 import { Appbar, Button, List, Modal, SafeAreaView } from '@components';
 import { AdvancedSettingsScreenProps } from '@navigators/types';
@@ -21,6 +22,7 @@ import { getUserAgentSync } from 'react-native-device-info';
 import CookieManager from '@react-native-cookies/cookies';
 import { store } from '@plugins/helpers/storage';
 import { recreateDatabaseIndexes } from '@database/db';
+import { getErrorMessage } from '@utils/error';
 
 const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
   const theme = useTheme();
@@ -61,6 +63,45 @@ const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
     setFalse: hideRecreateDBIndexDialog,
   } = useBoolean();
 
+  const {
+    value: maintenanceDialog,
+    setTrue: showMaintenanceDialog,
+    setFalse: hideMaintenanceDialog,
+  } = useBoolean();
+
+  const [isRunningMaintenance, setIsRunningMaintenance] = useState(false);
+
+  const handleDatabaseMaintenance = async () => {
+    setIsRunningMaintenance(true);
+    hideMaintenanceDialog();
+    try {
+      const results = await runDatabaseMaintenance();
+      const totalCleaned =
+        results.orphanedChapters +
+        results.orphanedNovelCategories +
+        results.orphanedMMKVEntries +
+        results.orphanedFiles;
+
+      if (totalCleaned > 0) {
+        showToast(
+          getString('advancedSettingsScreen.maintenanceComplete', {
+            count: totalCleaned,
+          }),
+        );
+      } else {
+        showToast(getString('advancedSettingsScreen.maintenanceNothingToClean'));
+      }
+    } catch (error) {
+      showToast(
+        getString('advancedSettingsScreen.maintenanceFailed') +
+          ': ' +
+          getErrorMessage(error),
+      );
+    } finally {
+      setIsRunningMaintenance(false);
+    }
+  };
+
   return (
     <SafeAreaView excludeTop>
       <Appbar
@@ -87,6 +128,15 @@ const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
               'advancedSettingsScreen.recreateDBIndexesDesc',
             )}
             onPress={showRecreateDBIndexDialog}
+            theme={theme}
+          />
+          <List.Item
+            title={getString('advancedSettingsScreen.databaseMaintenance')}
+            description={getString(
+              'advancedSettingsScreen.databaseMaintenanceDesc',
+            )}
+            onPress={showMaintenanceDialog}
+            disabled={isRunningMaintenance}
             theme={theme}
           />
           <List.Item
@@ -144,6 +194,15 @@ const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
           visible={clearDatabaseDialog}
           onSubmit={deleteCachedNovels}
           onDismiss={hideClearDatabaseDialog}
+          theme={theme}
+        />
+        <ConfirmationDialog
+          message={getString(
+            'advancedSettingsScreen.databaseMaintenanceDialogTitle',
+          )}
+          visible={maintenanceDialog}
+          onSubmit={handleDatabaseMaintenance}
+          onDismiss={hideMaintenanceDialog}
           theme={theme}
         />
         <ConfirmationDialog

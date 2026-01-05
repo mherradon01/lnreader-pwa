@@ -20,6 +20,7 @@ import { downloadFile } from '@plugins/helpers/fetch';
 import { getPlugin } from '@plugins/pluginManager';
 import { db } from '@database/db';
 import NativeFile from '@specs/NativeFile';
+import { cleanupNovelMMKVEntries } from './MaintenanceQueries';
 
 export const insertNovelAndChapters = async (
   pluginId: string,
@@ -149,10 +150,19 @@ export const switchNovelToLibraryQuery = async (
 
 // allow to delete local novels
 export const removeNovelsFromLibrary = (novelIds: Array<number>) => {
+  // Get novel info before updating for MMKV cleanup
+  const novelsToRemove = db.getAllSync<NovelInfo>(
+    `SELECT * FROM Novel WHERE id IN (${novelIds.join(', ')})`,
+  );
+
   runSync([
     [`UPDATE Novel SET inLibrary = 0 WHERE id IN (${novelIds.join(', ')});`],
     [`DELETE FROM NovelCategory WHERE novelId IN (${novelIds.join(', ')});`],
   ]);
+
+  // Clean up MMKV entries for removed novels
+  novelsToRemove.forEach(novel => cleanupNovelMMKVEntries(novel));
+
   showToast(getString('browseScreen.removeFromLibrary'));
 };
 

@@ -21,6 +21,12 @@ export interface StringMap {
   'advancedSettingsScreen.clearUpdatesWarning': 'string';
   'advancedSettingsScreen.clearupdatesTabDesc': 'string';
   'advancedSettingsScreen.dataManagement': 'string';
+  'advancedSettingsScreen.databaseMaintenance': 'string';
+  'advancedSettingsScreen.databaseMaintenanceDesc': 'string';
+  'advancedSettingsScreen.databaseMaintenanceDialogTitle': 'string';
+  'advancedSettingsScreen.maintenanceComplete': 'string';
+  'advancedSettingsScreen.maintenanceNothingToClean': 'string';
+  'advancedSettingsScreen.maintenanceFailed': 'string';
   'advancedSettingsScreen.deleteReadChapters': 'string';
   'advancedSettingsScreen.deleteReadChaptersDialogTitle': 'string';
   'advancedSettingsScreen.importEpub': 'string';
@@ -414,7 +420,6 @@ export interface StringMap {
   'readerScreen.noPreviousChapter': 'string';
   'readerSettings.autoScrollInterval': 'string';
   'readerSettings.autoScrollOffset': 'string';
-  'readerSettings.volumeButtonsOffset': 'string';
   'readerSettings.backgroundColor': 'string';
   'readerSettings.backgroundColorModal': 'string';
   'readerSettings.clearCustomCSS': 'string';
