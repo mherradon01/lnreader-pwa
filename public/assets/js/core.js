@@ -101,12 +101,17 @@ window.reader = new (function () {
 
   document.onscrollend = () => {
     if (!this.generalSettings.val.pageReader) {
+      const progress = parseInt(
+        ((window.scrollY + this.layoutHeight) / this.chapterHeight) * 100,
+        10,
+      );
+      // Update currentScrollProgress for resize handling
+      if (typeof currentScrollProgress !== 'undefined') {
+        currentScrollProgress = progress;
+      }
       this.post({
         type: 'save',
-        data: parseInt(
-          ((window.scrollY + this.layoutHeight) / this.chapterHeight) * 100,
-          10,
-        ),
+        data: progress,
       });
     }
   };
@@ -528,6 +533,11 @@ window.pageReader = new (function () {
       10,
     );
 
+    // Update currentScrollProgress for resize handling
+    if (typeof currentScrollProgress !== 'undefined') {
+      currentScrollProgress = newProgress;
+    }
+
     if (newProgress > reader.chapter.progress) {
       reader.post({
         type: 'save',
@@ -584,39 +594,76 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-function calculatePages() {
+// Track current scroll progress to avoid jumping on resize
+let currentScrollProgress = reader.chapter.progress;
+let initialLoadComplete = false;
+
+function updateCurrentProgress() {
+  if (reader.generalSettings.val.pageReader) {
+    if (pageReader.totalPages.val > 0) {
+      currentScrollProgress = ((pageReader.page.val + 1) / pageReader.totalPages.val) * 100;
+    }
+  } else {
+    if (reader.chapterHeight > 0) {
+      currentScrollProgress = ((window.scrollY + reader.layoutHeight) / reader.chapterHeight) * 100;
+    }
+  }
+}
+
+function calculatePages(forceScroll = false) {
   reader.refresh();
 
   if (reader.generalSettings.val.pageReader) {
-    pageReader.totalPages.val = parseInt(
+    const newTotalPages = parseInt(
       (reader.chapterWidth + reader.readerSettings.val.padding * 2) /
         reader.layoutWidth,
       10,
     );
+    
+    const hadPages = pageReader.totalPages.val > 0;
+    pageReader.totalPages.val = newTotalPages;
 
     if (initialPageReaderConfig.nextChapterScreenVisible) return;
 
-    pageReader.movePage(
-      Math.max(
+    // Only scroll on initial load or when forced (chapter navigation)
+    if (forceScroll || !initialLoadComplete) {
+      pageReader.movePage(
+        Math.max(
+          0,
+          Math.round(
+            (newTotalPages * reader.chapter.progress) / 100,
+          ) - 1,
+        ),
+      );
+    } else if (hadPages) {
+      // Maintain relative position after resize using current progress
+      const targetPage = Math.max(
         0,
-        Math.round(
-          (pageReader.totalPages.val * reader.chapter.progress) / 100,
-        ) - 1,
-      ),
-    );
+        Math.round((newTotalPages * currentScrollProgress) / 100) - 1,
+      );
+      pageReader.page.val = targetPage;
+      reader.chapterElement.style.transform =
+        'translateX(-' + targetPage * 100 + '%)';
+    }
   } else {
-    window.scrollTo({
-      top:
-        (reader.chapterHeight * reader.chapter.progress) / 100 -
-        reader.layoutHeight,
-      behavior: 'smooth',
-    });
+    // For scroll mode, only scroll to initial position on first load or forced
+    if (forceScroll || !initialLoadComplete) {
+      window.scrollTo({
+        top:
+          (reader.chapterHeight * reader.chapter.progress) / 100 -
+          reader.layoutHeight,
+        behavior: 'smooth',
+      });
+    }
+    // On resize, the browser maintains scroll position naturally for vertical scroll
   }
 }
 
 const ro = new ResizeObserver(() => {
-  if (pageReader.totalPages.val) {
-    calculatePages();
+  if (pageReader.totalPages.val || initialLoadComplete) {
+    // Update current progress before recalculating
+    updateCurrentProgress();
+    calculatePages(false);
   }
 });
 ro.observe(reader.chapterElement);
@@ -624,7 +671,12 @@ ro.observe(reader.chapterElement);
 // Also call once on load
 window.addEventListener('load', () => {
   document.fonts.ready.then(() => {
-    requestAnimationFrame(() => setTimeout(calculatePages, 0));
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        calculatePages(true);
+        initialLoadComplete = true;
+      }, 0);
+    });
   });
 });
 

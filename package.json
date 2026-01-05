@@ -11,7 +11,7 @@
     "build:open-apk": "open ./android/app/build/outputs/apk/release/",
     "web:dev": "webpack serve --mode development",
     "web:build": "webpack --mode production",
-    "web:serve": "npx serve web-build -s -p 3000",
+    "web:serve": "npx serve web-build -s -p 3001",
     "generate:env:debug": "node scripts/generate-env-file.cjs Debug",
     "generate:env:release": "node scripts/generate-env-file.cjs Release",
     "generate:string-types": "node scripts/generate-string-types.cjs",

@@ -86,8 +86,10 @@ window.reader = new (function () {
     );
     if (settings.fontFamily) {
       // Use /assets/fonts for web, file:/// for native
+      // Detect if we're in a real browser (not a WebView with blob: or file: protocol)
       const isBrowser = typeof window !== 'undefined' && window.location && 
-        (window.location.protocol === 'http:' || window.location.protocol === 'https:' || window.location.protocol === 'blob:');
+        (window.location.protocol === 'http:' || window.location.protocol === 'https:') &&
+        !window.ReactNativeWebView;
       const fontUrl = isBrowser 
         ? `/assets/fonts/${settings.fontFamily}.ttf`
         : `file:///android_asset/fonts/${settings.fontFamily}.ttf`;
@@ -114,12 +116,17 @@ window.reader = new (function () {
 
   document.onscrollend = () => {
     if (!this.generalSettings.val.pageReader) {
+      const progress = parseInt(
+        ((window.scrollY + this.layoutHeight) / this.chapterHeight) * 100,
+        10,
+      );
+      // Update currentScrollProgress for resize handling
+      if (typeof currentScrollProgress !== 'undefined') {
+        currentScrollProgress = progress;
+      }
       this.post({
         type: 'save',
-        data: parseInt(
-          ((window.scrollY + this.layoutHeight) / this.chapterHeight) * 100,
-          10,
-        ),
+        data: progress,
       });
     }
   };
@@ -542,6 +549,11 @@ window.pageReader = new (function () {
       10,
     );
 
+    // Update currentScrollProgress for resize handling
+    if (typeof currentScrollProgress !== 'undefined') {
+      currentScrollProgress = newProgress;
+    }
+
     if (newProgress > reader.chapter.progress) {
       reader.post({
         type: 'save',
@@ -598,39 +610,101 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-function calculatePages() {
+// Track current scroll progress to avoid jumping on resize
+let currentScrollProgress = reader.chapter.progress;
+let initialLoadComplete = false;
+let ignoreNextResize = false;
+
+function updateCurrentProgress() {
+  if (reader.generalSettings.val.pageReader) {
+    if (pageReader.totalPages.val > 0) {
+      currentScrollProgress = ((pageReader.page.val + 1) / pageReader.totalPages.val) * 100;
+    }
+  } else {
+    if (reader.chapterHeight > 0) {
+      currentScrollProgress = ((window.scrollY + reader.layoutHeight) / reader.chapterHeight) * 100;
+    }
+  }
+}
+
+function calculatePages(forceScroll = false) {
   reader.refresh();
 
   if (reader.generalSettings.val.pageReader) {
-    pageReader.totalPages.val = parseInt(
+    const newTotalPages = parseInt(
       (reader.chapterWidth + reader.readerSettings.val.padding * 2) /
         reader.layoutWidth,
       10,
     );
+    
+    const hadPages = pageReader.totalPages.val > 0;
+    pageReader.totalPages.val = newTotalPages;
 
     if (initialPageReaderConfig.nextChapterScreenVisible) return;
 
-    pageReader.movePage(
-      Math.max(
+    // Only scroll on initial load or when forced (chapter navigation)
+    if (forceScroll || !initialLoadComplete) {
+      pageReader.movePage(
+        Math.max(
+          0,
+          Math.round(
+            (newTotalPages * reader.chapter.progress) / 100,
+          ) - 1,
+        ),
+      );
+    } else if (hadPages) {
+      // Maintain relative position after resize using current progress
+      const targetPage = Math.max(
         0,
-        Math.round(
-          (pageReader.totalPages.val * reader.chapter.progress) / 100,
-        ) - 1,
-      ),
-    );
+        Math.round((newTotalPages * currentScrollProgress) / 100) - 1,
+      );
+      pageReader.page.val = targetPage;
+      reader.chapterElement.style.transform =
+        'translateX(-' + targetPage * 100 + '%)';
+    }
   } else {
-    window.scrollTo({
-      top:
-        (reader.chapterHeight * reader.chapter.progress) / 100 -
-        reader.layoutHeight,
-      behavior: 'smooth',
-    });
+    // For scroll mode, only scroll to initial position on first load or forced
+    if (forceScroll || !initialLoadComplete) {
+      const targetScroll = (reader.chapterHeight * reader.chapter.progress) / 100 - reader.layoutHeight;
+      // Use instant scroll to avoid warping effect
+      window.scrollTo({
+        top: targetScroll,
+        behavior: 'instant',
+      });
+    }
+    // On resize, the browser maintains scroll position naturally for vertical scroll
   }
 }
 
-const ro = new ResizeObserver(() => {
-  if (pageReader.totalPages.val) {
-    calculatePages();
+const ro = new ResizeObserver((entries) => {
+  // Skip if we're in the middle of an HTML update
+  if (ignoreNextResize) {
+    ignoreNextResize = false;
+    return;
+  }
+  
+  if (pageReader.totalPages.val || initialLoadComplete) {
+    // Check if the size actually changed (ignore if settings opened/closed without size change)
+    const entry = entries[0];
+    if (entry && entry.contentRect) {
+      const newHeight = entry.contentRect.height;
+      const newWidth = entry.contentRect.width;
+      
+      // Only recalculate if dimensions actually changed
+      if (reader.generalSettings.val.pageReader) {
+        const currentWidth = reader.chapterElement.scrollWidth;
+        if (Math.abs(currentWidth - newWidth) > 1) {
+          updateCurrentProgress();
+          calculatePages(false);
+        }
+      } else {
+        const currentHeight = reader.chapterElement.scrollHeight;
+        if (Math.abs(currentHeight - newHeight) > 1) {
+          updateCurrentProgress();
+          calculatePages(false);
+        }
+      }
+    }
   }
 });
 ro.observe(reader.chapterElement);
@@ -638,7 +712,18 @@ ro.observe(reader.chapterElement);
 // Also call once on load
 window.addEventListener('load', () => {
   document.fonts.ready.then(() => {
-    requestAnimationFrame(() => setTimeout(calculatePages, 0));
+    // Use double requestAnimationFrame to ensure layout is complete
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // Force layout recalculation
+        reader.chapterElement.offsetHeight;
+        calculatePages(true);
+        // Set flag after a small delay to ensure scroll has been applied
+        requestAnimationFrame(() => {
+          initialLoadComplete = true;
+        });
+      });
+    });
   });
 });
 
@@ -761,13 +846,19 @@ window.addEventListener('load', () => {
 
 // text options
 (function () {
-  van.derive(() => {
+  let lastBionicReading = reader.generalSettings.val.bionicReading;
+  let lastRemoveSpacing = reader.generalSettings.val.removeExtraParagraphSpacing;
+  let lastHTML = '';
+  let isProcessing = false;
+  let initialProcessingDone = false;
+  
+  const processHTML = () => {
     let html = reader.rawHTML;
-    if (reader.generalSettings.val.bionicReading) {
+    if (lastBionicReading) {
       html = textVide.textVide(reader.rawHTML);
     }
 
-    if (reader.generalSettings.val.removeExtraParagraphSpacing) {
+    if (lastRemoveSpacing) {
       html = html
         .replace(/(?:&nbsp;\s*|[\u200b]\s*)+(?=<\/?p[> ])/g, '')
         .replace(/<br>\s*<br>\s*(?:<br>\s*)+/g, '<br><br>') //force max 2 consecutive <br>, chaining regex
@@ -785,6 +876,62 @@ window.addEventListener('load', () => {
         ) //if p found, delete all double br near p
         .replace(/<br>(?:(?=\s*<\/?p[> ])|(?<=<\/?p>\s*<br>))\s*/g, '');
     }
-    reader.chapterElement.innerHTML = html;
+    return html;
+  };
+  
+  // Process initial HTML immediately without saving scroll position
+  const initialHTML = processHTML();
+  if (initialHTML !== reader.chapterElement.innerHTML) {
+    reader.chapterElement.innerHTML = initialHTML;
+    lastHTML = initialHTML;
+  }
+  initialProcessingDone = true;
+  
+  van.derive(() => {
+    const bionicReading = reader.generalSettings.val.bionicReading;
+    const removeSpacing = reader.generalSettings.val.removeExtraParagraphSpacing;
+    
+    // Only reprocess if these specific settings changed
+    if (bionicReading === lastBionicReading && removeSpacing === lastRemoveSpacing) {
+      return;
+    }
+    
+    // Prevent concurrent processing
+    if (isProcessing) {
+      return;
+    }
+    
+    isProcessing = true;
+    lastBionicReading = bionicReading;
+    lastRemoveSpacing = removeSpacing;
+    
+    const html = processHTML();
+    
+    // Only update if HTML actually changed
+    if (html !== lastHTML) {
+      lastHTML = html;
+      
+      // Only save/restore scroll if initial processing is done
+      const savedScrollY = initialProcessingDone ? window.scrollY : 0;
+      const savedScrollX = initialProcessingDone ? window.scrollX : 0;
+      
+      // Disable ResizeObserver temporarily
+      ignoreNextResize = true;
+      
+      reader.chapterElement.innerHTML = html;
+      
+      // Restore scroll position immediately after innerHTML change
+      if (initialProcessingDone && (savedScrollY > 0 || savedScrollX > 0)) {
+        // Use instant scroll to prevent visible jump
+        window.scrollTo({
+          top: savedScrollY,
+          left: savedScrollX,
+          behavior: 'instant'
+        });
+      }
+      isProcessing = false;
+    } else {
+      isProcessing = false;
+    }
   });
 })();

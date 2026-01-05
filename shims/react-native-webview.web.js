@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useMemo } from 'react';
 
 const WebViewComponent = forwardRef((props, ref) => {
   const iframeRef = useRef(null);
@@ -146,8 +146,10 @@ const WebViewComponent = forwardRef((props, ref) => {
     ...props.style,
   };
 
-  // If source is HTML, use blob URL
-  if (props.source?.html) {
+  // Memoize the blob URL to prevent iframe reload on re-renders
+  const objectUrl = useMemo(() => {
+    if (!props.source?.html) return null;
+    
     // Inject base tag to allow relative URLs to work from blob
     const baseUrl = window.location.origin + '/';
     let htmlWithBase = props.source.html;
@@ -162,16 +164,20 @@ const WebViewComponent = forwardRef((props, ref) => {
     }
     
     const blob = new Blob([htmlWithBase], { type: 'text/html' });
-    const objectUrl = URL.createObjectURL(blob);
-    
-    useEffect(() => {
-      return () => {
-        if (objectUrl) {
-          URL.revokeObjectURL(objectUrl);
-        }
-      };
-    }, [objectUrl]);
+    return URL.createObjectURL(blob);
+  }, [props.source?.html]);
 
+  // Clean up blob URL when it changes or component unmounts
+  useEffect(() => {
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [objectUrl]);
+
+  // If source is HTML, use blob URL
+  if (objectUrl) {
     return React.createElement('iframe', {
       ref: iframeRef,
       style: iframeStyle,

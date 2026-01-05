@@ -1,4 +1,16 @@
-const { div, p, img, button } = van.tags;
+// Prevent redeclaration error if script is loaded multiple times
+(function() {
+  'use strict';
+  
+  // Check if already initialized
+  if (window.__readerUIInitialized) {
+    return;
+  }
+  window.__readerUIInitialized = true;
+
+if (typeof div === 'undefined') {
+  var { div, p, img, button } = van.tags;
+}
 
 const ChapterEnding = () => {
   return () =>
@@ -374,3 +386,5 @@ if (document.readyState === 'loading') {
   initReaderUI();
   initChapterEnding();
 }
+
+})(); // End of IIFE
