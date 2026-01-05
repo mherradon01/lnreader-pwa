@@ -151,16 +151,21 @@
       "selectSourceDesc": "Select a Source To Migrate From"
     },
     "noSource": "Your library does not have any novels from this source",
+    "pin": "Pin",
     "pinnedPlugin": "Pinned %{name}",
     "pinnedPlugins": "Pinned plugins",
     "removeFromLibrary": "Removed from Library",
     "searchbar": "Search sources",
     "searchResults": "Search results",
     "selectNovel": "Select Novel",
+    "uninstall": "Uninstall",
     "uninstalledPlugin": "Uninstalled %{name}",
+    "unpin": "Unpin",
     "unpinnedPlugin": "Unpinned %{name}",
+    "update": "Update",
     "updateFailed": "Update failed",
     "updatedTo": "Updated to %{version}",
+    "visitWebsite": "Visit website",
     "settings": {
       "title": "Plugin Settings",
       "description": "Fill in the plugin settings. Restart app to apply the settings."
