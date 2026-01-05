@@ -1,4 +1,6 @@
-# Quick Start Guide - Web Version
+# Quick Start Guide
+
+This guide covers how to use and develop the LNReader Progressive Web App.
 
 ## For End Users
 
@@ -6,7 +8,8 @@
 
 1. **Open in Browser:**
    - Navigate to the web app URL in your browser
-   - Works on Chrome, Firefox, Safari, Edge
+   - Works on Chrome, Firefox, Safari, Edge, and other modern browsers
+   - Requires a modern browser with JavaScript enabled
 
 2. **Install as App (PWA):**
    
@@ -33,18 +36,14 @@
 ### Features
 
 ✅ **Available:**
-- Browse and search novels
-- Read chapters
-- Bookmark and track progress
-- Manage library
-- Customize settings
-- Offline reading (cached content)
-- Cross-platform sync (via account)
-
-❌ **Not Available:**
-- Volume button navigation
-- Background downloads
-- Some native Android features
+- Browse and search light novels
+- Read chapters with customizable reader settings
+- Bookmark and track reading progress
+- Manage your library
+- Customize app settings and themes
+- Offline reading (previously viewed content is cached)
+- Works on all platforms (Windows, macOS, Linux, iOS, Android)
+- No app store required - install directly from browser
 
 ## For Developers
 
@@ -53,8 +52,15 @@
 1. **Prerequisites:**
    ```bash
    # Required:
-   - Node.js 20+
-   - pnpm 9.15.0
+   - Node.js 20 or higher
+   - pnpm 9.15.0 (exact version)
+   
+   # Install pnpm if not already installed:
+   npm install -g pnpm@9.15.0
+   
+   # Verify installations:
+   node --version   # Should be >= 20
+   pnpm --version   # Should be 9.15.0
    ```
 
 2. **Clone and Install:**

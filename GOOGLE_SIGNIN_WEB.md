@@ -2,9 +2,18 @@
 
 This document explains how to set up Google Sign-In for the web version of LNReader.
 
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Setup Steps](#setup-steps)
+- [How It Works](#how-it-works)
+- [Troubleshooting](#troubleshooting)
+
 ## Prerequisites
 
-You need a Google Cloud Project with OAuth 2.0 credentials configured.
+- A Google Cloud Project
+- OAuth 2.0 credentials configured
+- Node.js 20+ and pnpm 9.15.0 installed
 
 ## Setup Steps
 
@@ -92,11 +101,34 @@ The web implementation uses Google Identity Services (GIS) for OAuth2 authentica
 ### "Google Identity Services failed to load"
 - Make sure you have internet connectivity
 - Check if the GIS script is blocked by any browser extension
+- Verify the script tag in index.html is present
 
 ### "Failed to sign in with Google"
 - Verify your Client ID is correct
 - Check if your domain is in the authorized JavaScript origins
 - Make sure the OAuth consent screen is configured properly
+- Ensure the Google Drive API is enabled
+
+### Token expires quickly
+- Google access tokens expire after 1 hour
+- The app should handle token refresh automatically
+- If issues persist, try signing out and back in
+
+## Security Notes
+
+**⚠️ Important Security Considerations:**
+
+1. **Never commit credentials:** Don't add `.env` files to git
+2. **Restrict origins:** Only add trusted domains to authorized origins
+3. **Use HTTPS in production:** OAuth requires HTTPS for security
+4. **Minimal scopes:** Only request necessary permissions
+5. **Regular audits:** Review OAuth consent screen and permissions regularly
+
+## Additional Resources
+
+- [Google Identity Services Documentation](https://developers.google.com/identity/gsi/web)
+- [Google Drive API Documentation](https://developers.google.com/drive)
+- [OAuth 2.0 Best Practices](https://developers.google.com/identity/protocols/oauth2/web-server#security-considerations)
 
 ### Token expired errors
 - The implementation automatically handles token refresh

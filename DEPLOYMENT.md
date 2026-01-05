@@ -1,12 +1,23 @@
 # Web/PWA Deployment Guide
 
+This guide covers deploying the LNReader PWA to production hosting platforms.
+
 ## Prerequisites
 
-- Node.js 20 or higher
-- pnpm 9.15.0
-- A hosting service that supports static sites with HTTPS
+- **Node.js:** Version 20 or higher (LTS recommended)
+- **pnpm:** Version 9.15.0 (exact version required)
+- **Hosting:** A service that supports static sites with HTTPS (required for PWA)
+- **SSL Certificate:** HTTPS is mandatory for PWA features to work
 
-## Building for Production
+## Recommended Platforms
+
+Choose a deployment platform based on your needs:
+
+| Platform | Difficulty | Cost | Best For |
+|----------|-----------|------|----------|
+| Vercel | Easy | Free tier available | Quick deployment, auto-deploy from git |
+| Netlify | Easy | Free tier available | Simple hosting with forms/functions |
+| Custom Server | Medium | Variable | Full control, custom domain |
 
 1. **Install dependencies:**
    ```bash
@@ -29,9 +40,18 @@
    pnpm web:serve
    ```
    
-   Open http://localhost:3000 in your browser.
+   Open http://localhost:3001 in your browser (default port for production serve).
 
 ## Deployment Options
+
+Choose a deployment platform based on your needs:
+
+| Platform | Difficulty | Cost | Features |
+|----------|-----------|------|----------|
+| Vercel | Easy | Free tier available | Auto-deploy, CDN, Analytics |
+| Netlify | Easy | Free tier available | Auto-deploy, Forms, Functions |
+| GitHub Pages | Medium | Free | Simple hosting |
+| Custom Server | Hard | Variable | Full control |
 
 ### Option 1: Vercel (Recommended)
 
@@ -123,28 +143,7 @@ Vercel offers excellent support for React apps and PWAs.
    netlify deploy --prod
    ```
 
-### Option 3: GitHub Pages
-
-1. **Build the app:**
-   ```bash
-   pnpm web:build
-   ```
-
-2. **Add `.nojekyll` file:**
-   ```bash
-   touch web-build/.nojekyll
-   ```
-
-3. **Deploy using gh-pages:**
-   ```bash
-   npm install -g gh-pages
-   gh-pages -d web-build
-   ```
-
-4. **Update package.json (if using subdirectory):**
-   Add `"homepage": "https://username.github.io/repo-name"` to package.json
-
-### Option 4: Custom Server (Nginx)
+### Option 3: Custom Server (Nginx)
 
 1. **Build the app:**
    ```bash
