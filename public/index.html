@@ -95,26 +95,42 @@
         align-items: center;
         justify-content: center;
         height: 100vh;
-        background-color: #000;
+        width: 100vw;
+        background-color: #121212;
         color: #fff;
+        gap: 24px;
+      }
+      
+      .app-loading.hidden {
+        display: none;
+      }
+      
+      .app-loading .logo {
+        width: 100px;
+        height: 100px;
+        border-radius: 20px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      }
+      
+      .app-loading .app-name {
+        font-size: 28px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
       }
       
       .app-loading .spinner {
-        border: 4px solid rgba(255, 255, 255, 0.1);
-        border-left-color: #fff;
+        border: 4px solid #333333;
+        border-top: 4px solid #007AFF;
         border-radius: 50%;
         width: 50px;
         height: 50px;
         animation: spin 1s linear infinite;
+        margin-top: 12px;
       }
       
       @keyframes spin {
+        from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
-      }
-      
-      .app-loading-text {
-        margin-top: 20px;
-        font-size: 18px;
       }
     </style>
   </head>
@@ -122,8 +138,9 @@
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root">
       <div class="app-loading">
+        <img src="/icon-192x192.png" alt="LNReader" class="logo" />
+        <span class="app-name">LNReader</span>
         <div class="spinner"></div>
-        <div class="app-loading-text">Loading LNReader...</div>
       </div>
     </div>
   </body>
