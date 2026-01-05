@@ -2,6 +2,7 @@ import {
   getChapter as getDbChapter,
   getNextChapter,
   getPrevChapter,
+  deleteChapter as deleteChapterFromDb,
 } from '@database/queries/ChapterQueries';
 import { insertHistory } from '@database/queries/HistoryQueries';
 import { ChapterInfo, NovelInfo } from '@database/types';
@@ -229,8 +230,12 @@ export default function useChapter(
           // a relative number
           markChapterRead(chapter.id);
           updateTracker();
-          // Delete chapter from database after reading
-          deleteChapter(chapter);
+          // Silently delete downloaded chapter after reading (no notification)
+          if (chapter.isDownloaded) {
+            deleteChapterFromDb(novel.pluginId, novel.id, chapter.id).catch(
+              () => {}, // Ignore errors silently
+            );
+          }
         }
       }
     },
@@ -240,7 +245,6 @@ export default function useChapter(
       markChapterRead,
       updateChapterProgress,
       updateTracker,
-      deleteChapter,
     ],
   );
 

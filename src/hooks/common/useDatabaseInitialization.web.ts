@@ -20,8 +20,15 @@ export const useDatabaseInitialization =
         await initializeDatabaseAsync();
 
         // Run lightweight cleanup on startup to remove orphaned entries
+        // and verify downloaded chapters actually have files
         try {
-          runStartupCleanup();
+          const results = await runStartupCleanup();
+          if (__DEV__ && results.fixedDownloads > 0) {
+            // eslint-disable-next-line no-console
+            console.log(
+              `Startup cleanup: Fixed ${results.fixedDownloads} chapter(s) marked as downloaded but missing files`,
+            );
+          }
         } catch (cleanupError) {
           // Log but don't fail initialization if cleanup fails
           if (__DEV__) {

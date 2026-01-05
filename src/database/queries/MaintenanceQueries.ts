@@ -282,15 +282,61 @@ export const runDatabaseMaintenance = async (): Promise<{
 };
 
 /**
+ * Verifies downloaded chapters and fixes database inconsistencies.
+ * Checks if chapters marked as downloaded in the DB actually have files.
+ * If files are missing, updates the DB to mark them as not downloaded.
+ */
+export const verifyDownloadedChapters = async (): Promise<number> => {
+  let fixedCount = 0;
+
+  try {
+    // Get all chapters marked as downloaded
+    const downloadedChapters = db.getAllSync<{
+      id: number;
+      novelId: number;
+      pluginId: string;
+    }>(
+      `SELECT Chapter.id, Chapter.novelId, Novel.pluginId 
+       FROM Chapter 
+       JOIN Novel ON Novel.id = Chapter.novelId 
+       WHERE Chapter.isDownloaded = 1`,
+    );
+
+    for (const chapter of downloadedChapters) {
+      const chapterFolder = `${NOVEL_STORAGE}/${chapter.pluginId}/${chapter.novelId}/${chapter.id}`;
+      const indexPath = `${chapterFolder}/index.html`;
+
+      // Check if the downloaded chapter files actually exist
+      if (!NativeFile.exists(indexPath)) {
+        // Files missing, update database to mark as not downloaded
+        db.runSync('UPDATE Chapter SET isDownloaded = 0 WHERE id = ?', [
+          chapter.id,
+        ]);
+        fixedCount++;
+      }
+    }
+  } catch (error) {
+    console.error('[verifyDownloadedChapters] Error:', error);
+  }
+
+  return fixedCount;
+};
+
+/**
  * Lightweight cleanup suitable for running on app startup.
  * Only cleans orphaned database entries, not files or MMKV.
+ * Also verifies downloaded chapters and fixes inconsistencies.
  */
-export const runStartupCleanup = (): {
+export const runStartupCleanup = async (): Promise<{
   orphanedChapters: number;
   orphanedNovelCategories: number;
-} => {
+  fixedDownloads: number;
+}> => {
+  const fixedDownloads = await verifyDownloadedChapters();
+  
   return {
     orphanedChapters: deleteOrphanedChapters(),
     orphanedNovelCategories: deleteOrphanedNovelCategories(),
+    fixedDownloads,
   };
 };
