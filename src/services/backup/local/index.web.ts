@@ -393,13 +393,14 @@ export const restoreBackup = async (
 
             try {
               // Temporarily enable refreshNovelMetadata to re-download covers
-              const { MMKVStorage: MMKVStorageModule } = await import(
+              const { MMKVStorage: MMKVStorageModuleImport } = await import(
                 '@utils/mmkv/mmkv'
               );
               const { APP_SETTINGS } = await import(
                 '@hooks/persisted/useSettings'
               );
-              const currentSettings = MMKVStorageModule.getString(APP_SETTINGS);
+              const currentSettings =
+                MMKVStorageModuleImport.getString(APP_SETTINGS);
               const settings = currentSettings
                 ? JSON.parse(currentSettings)
                 : {};
@@ -407,12 +408,15 @@ export const restoreBackup = async (
 
               // Enable metadata refresh
               settings.refreshNovelMetadata = true;
-              MMKVStorageModule.set(APP_SETTINGS, JSON.stringify(settings));
+              MMKVStorageModuleImport.set(
+                APP_SETTINGS,
+                JSON.stringify(settings),
+              );
 
-              const ServiceManagerModule = (
+              const ServiceManagerModuleImport = (
                 await import('../../ServiceManager')
               ).default;
-              await ServiceManagerModule.manager.addTask({
+              await ServiceManagerModuleImport.manager.addTask({
                 name: 'UPDATE_LIBRARY',
                 data: {},
               });
@@ -420,7 +424,10 @@ export const restoreBackup = async (
               // Restore original setting after a delay (library update runs in background)
               setTimeout(() => {
                 settings.refreshNovelMetadata = originalRefreshMetadata;
-                MMKVStorageModule.set(APP_SETTINGS, JSON.stringify(settings));
+                MMKVStorageModuleImport.set(
+                  APP_SETTINGS,
+                  JSON.stringify(settings),
+                );
               }, 5000);
 
               // eslint-disable-next-line no-console
