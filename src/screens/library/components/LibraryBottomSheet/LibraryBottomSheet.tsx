@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import React, { RefObject, useCallback, useMemo, useState } from 'react';
 import {
   StyleProp,

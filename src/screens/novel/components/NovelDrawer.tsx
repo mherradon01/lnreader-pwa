@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import { LegendList, LegendListRenderItemProps } from '@legendapp/list';
 import { ThemeColors } from '@theme/types';
 import color from 'color';

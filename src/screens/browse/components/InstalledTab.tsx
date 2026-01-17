@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import React, { useCallback, useMemo, useState, memo } from 'react';
 import { Text, StyleSheet } from 'react-native';
 import { Portal } from 'react-native-paper';

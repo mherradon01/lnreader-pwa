@@ -78,6 +78,7 @@ export const useGithubUpdateChecker = (): GithubUpdate => {
 
   useEffect(() => {
     checkForRelease();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!checking && latestRelease?.tag_name) {

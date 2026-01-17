@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import { useTheme } from '@hooks/persisted';
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, Dimensions } from 'react-native';

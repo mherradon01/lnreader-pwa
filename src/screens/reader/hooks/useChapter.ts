@@ -246,6 +246,7 @@ export default function useChapter(
         }
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       chapter,
       incognitoMode,

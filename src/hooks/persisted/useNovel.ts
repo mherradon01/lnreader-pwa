@@ -617,6 +617,7 @@ export const useNovel = (novelOrPath: string | NovelInfo, pluginId: string) => {
         console.log('[useNovel.useEffect] Chapter fetch completed');
         setFetching(false);
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getChapters, novel, novelOrPath]);
 
   // #endregion

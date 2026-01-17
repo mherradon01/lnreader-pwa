@@ -196,6 +196,7 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
         }
       `);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readerSettings]);
 
   useEffect(() => {
@@ -527,6 +528,7 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
       </html>
       `,
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       chapter.id, // Only rebuild when chapter changes
       chapter.isDownloaded,

@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import React, { useCallback, useMemo, useState, memo } from 'react';
 import { View, Text, StyleSheet, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';

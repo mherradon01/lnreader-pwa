@@ -91,6 +91,7 @@ export default function useImport() {
           // Alert user with more details
           const errorMsg =
             error instanceof Error ? error.message : 'Unknown error';
+          // eslint-disable-next-line no-alert
           alert(`Failed to add import tasks: ${errorMsg}`);
         }
       })

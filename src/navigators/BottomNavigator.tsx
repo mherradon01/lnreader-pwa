@@ -59,26 +59,30 @@ const BottomNavigator = () => {
     [],
   );
 
+  const CustomTabBar = useCallback(
+    (props: any) => (
+      <BottomTabBar
+        {...props}
+        theme={theme}
+        showLabelsInNav={showLabelsInNav}
+        renderIcon={renderIcon}
+      />
+    ),
+    [theme, showLabelsInNav, renderIcon],
+  );
+
+  const screenOptions = {
+    headerShown: false,
+    animation: 'shift' as const,
+    lazy: true,
+    tabBarBadgeStyle: {
+      backgroundColor: theme.error,
+      color: theme.onError,
+    },
+  };
+
   return (
-    <Tab.Navigator
-      screenOptions={() => ({
-        headerShown: false,
-        animation: 'shift',
-        lazy: true,
-        tabBarBadgeStyle: {
-          backgroundColor: theme.error,
-          color: theme.onError,
-        },
-      })}
-      tabBar={props => (
-        <BottomTabBar
-          {...props}
-          theme={theme}
-          showLabelsInNav={showLabelsInNav}
-          renderIcon={renderIcon}
-        />
-      )}
-    >
+    <Tab.Navigator screenOptions={screenOptions} tabBar={CustomTabBar}>
       <Tab.Screen
         name="Library"
         component={Library}

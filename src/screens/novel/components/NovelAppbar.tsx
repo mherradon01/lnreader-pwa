@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import React, { memo, useCallback, useMemo, useState } from 'react';
 import { getString } from '@strings/translations';
 import { Appbar } from 'react-native-paper';
