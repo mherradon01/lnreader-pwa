@@ -89,7 +89,9 @@ const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
           }),
         );
       } else {
-        showToast(getString('advancedSettingsScreen.maintenanceNothingToClean'));
+        showToast(
+          getString('advancedSettingsScreen.maintenanceNothingToClean'),
+        );
       }
     } catch (error) {
       showToast(

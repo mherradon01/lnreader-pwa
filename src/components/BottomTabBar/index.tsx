@@ -31,7 +31,8 @@ function CustomBottomTabBar({
   // Use the hook to get insets for native platforms
   const safeInsets = useSafeAreaInsets();
   // On native, use the insets; on web, CSS handles safe area via data attribute
-  const bottomInset = Platform.OS === 'web' ? 0 : (safeInsets.bottom || insets?.bottom || 0);
+  const bottomInset =
+    Platform.OS === 'web' ? 0 : safeInsets.bottom || insets?.bottom || 0;
 
   const containerRef = useRef<View>(null);
 
@@ -55,9 +56,12 @@ function CustomBottomTabBar({
   );
 
   // Web-specific props for safe area handling
-  const webProps = Platform.OS === 'web' ? {
-    'data-bottom-tab-bar': 'true',
-  } : {};
+  const webProps =
+    Platform.OS === 'web'
+      ? {
+          'data-bottom-tab-bar': 'true',
+        }
+      : {};
 
   return (
     <View

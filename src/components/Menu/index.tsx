@@ -45,7 +45,9 @@ const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
   const [isMeasured, setIsMeasured] = useState(false);
 
   const menuAnimatedStyle = useAnimatedStyle(() => ({
-    boxShadow: theme.isDark ? '0 2px 6px rgba(0, 0, 0, 0.25)' : `0 2px 6px ${theme.shadow}`,
+    boxShadow: theme.isDark
+      ? '0 2px 6px rgba(0, 0, 0, 0.25)'
+      : `0 2px 6px ${theme.shadow}`,
     position: 'absolute' as const,
     left: Math.max(16, Math.min(anchorLayout.x, screenWidth - 220)),
     top: anchorLayout.y + anchorLayout.height + 8,

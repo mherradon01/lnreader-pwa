@@ -5,7 +5,7 @@ import Color, { ColorInstance } from 'color';
 
 const setWebThemeColor = (color: string) => {
   if (typeof document === 'undefined') return;
-  
+
   let metaThemeColor = document.querySelector('meta[name="theme-color"]');
   if (!metaThemeColor) {
     metaThemeColor = document.createElement('meta');

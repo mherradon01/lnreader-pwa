@@ -8,17 +8,17 @@ export const fetchNovel = async (pluginId: string, novelPath: string) => {
   }
 
   let plugin = getPlugin(pluginId);
-  
+
   // If plugin not in cache, try async load
   if (!plugin) {
     // console.log('[fetchNovel] Plugin not in cache, attempting async load:', pluginId);
     plugin = await loadPlugin(pluginId);
   }
-  
+
   if (!plugin) {
     throw new Error(`Unknown plugin: ${pluginId}`);
   }
-  
+
   const res = await plugin.parseNovel(novelPath);
   return res;
 };
@@ -31,13 +31,13 @@ export const fetchChapter = async (pluginId: string, chapterPath: string) => {
   }
 
   let plugin = getPlugin(pluginId);
-  
+
   // If plugin not in cache, try async load
   if (!plugin) {
     // console.log('[fetchChapter] Plugin not in cache, attempting async load:', pluginId);
     plugin = await loadPlugin(pluginId);
   }
-  
+
   let chapterText = `Unknown plugin: ${pluginId}`;
   if (plugin) {
     chapterText = await plugin.parseChapter(chapterPath);
@@ -52,17 +52,17 @@ export const fetchChapters = async (pluginId: string, novelPath: string) => {
   }
 
   let plugin = getPlugin(pluginId);
-  
+
   // If plugin not in cache, try async load
   if (!plugin) {
     // console.log('[fetchChapters] Plugin not in cache, attempting async load:', pluginId);
     plugin = await loadPlugin(pluginId);
   }
-  
+
   if (!plugin) {
     throw new Error(`Unknown plugin: ${pluginId}`);
   }
-  
+
   const res = await plugin.parseNovel(novelPath);
   return res?.chapters;
 };
@@ -78,7 +78,7 @@ export const fetchPage = async (
   }
 
   let plugin = getPlugin(pluginId);
-  
+
   // If plugin not in cache, try async load
   if (!plugin) {
     // console.log('[fetchPage] Plugin not in cache, attempting async load:', pluginId);
@@ -99,7 +99,7 @@ export const fetchPage = async (
   if (!plugin.parsePage) {
     throw new Error(`Plugin "${pluginId}" does not have parsePage method`);
   }
-  
+
   // console.log('[fetchPage] Calling parsePage for:', { pluginId, novelPath, page });
   const res = await plugin.parsePage(novelPath, page);
   // console.log('[fetchPage] parsePage returned:', res?.chapters?.length, 'chapters');

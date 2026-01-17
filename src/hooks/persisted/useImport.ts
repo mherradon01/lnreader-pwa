@@ -24,7 +24,7 @@ export default function useImport() {
 
     // Process each selected file and store in cache directory
     Promise.all(
-      pickedNovel.assets.map(async (asset) => {
+      pickedNovel.assets.map(async asset => {
         try {
           let blob: Blob | null = null;
 
@@ -71,28 +71,30 @@ export default function useImport() {
         } catch (error) {
           return null;
         }
+      }),
+    )
+      .then(tasks => {
+        const validTasks = tasks.filter(Boolean) as any;
+
+        // Sanitize tasks to ensure they're serializable
+        const sanitizedTasks = validTasks.map((task: any) => ({
+          name: task.name,
+          data: {
+            filename: String(task.data.filename),
+            uri: String(task.data.uri),
+          },
+        }));
+
+        try {
+          ServiceManager.manager.addTask(sanitizedTasks);
+        } catch (error) {
+          // Alert user with more details
+          const errorMsg =
+            error instanceof Error ? error.message : 'Unknown error';
+          alert(`Failed to add import tasks: ${errorMsg}`);
+        }
       })
-    ).then((tasks) => {
-      const validTasks = tasks.filter(Boolean) as any;
-      
-      // Sanitize tasks to ensure they're serializable
-      const sanitizedTasks = validTasks.map((task: any) => ({
-        name: task.name,
-        data: {
-          filename: String(task.data.filename),
-          uri: String(task.data.uri),
-        },
-      }));
-      
-      try {
-        ServiceManager.manager.addTask(sanitizedTasks);
-      } catch (error) {
-        // Alert user with more details
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-        alert(`Failed to add import tasks: ${errorMsg}`);
-      }
-    }).catch((_error) => {
-    });
+      .catch(_error => {});
   }, []);
 
   const resumeImport = () => ServiceManager.manager.resume();

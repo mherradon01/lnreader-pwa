@@ -71,7 +71,11 @@ export const downloadFile = async (
     'Cache-Control': 'max-age=0',
     'User-Agent': getUserAgent(),
   };
-  if (init?.headers && typeof init.headers === 'object' && !(init.headers instanceof Headers)) {
+  if (
+    init?.headers &&
+    typeof init.headers === 'object' &&
+    !(init.headers instanceof Headers)
+  ) {
     Object.assign(headers, init.headers);
   }
   return NativeFile.downloadFile(

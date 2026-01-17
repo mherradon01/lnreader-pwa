@@ -114,7 +114,7 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
   useEffect(() => {
     const newSettings =
       getMMKVObject<ChapterReaderSettings>(CHAPTER_READER_SETTINGS) ||
-        initialChapterReaderSettings;
+      initialChapterReaderSettings;
     initialReaderSettings.current = newSettings;
     setReaderSettings(newSettings);
     webViewLoadedRef.current = false; // Reset on chapter change
@@ -123,47 +123,59 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
   // Update battery level when chapter changes to ensure fresh value on navigation
   const batteryLevel = useMemo(() => getBatteryLevelSync(), []);
   const plugin = getPlugin(novel?.pluginId);
-  
+
   // State for plugin custom files content (loaded asynchronously)
   const [pluginCustomJSContent, setPluginCustomJSContent] = useState('');
   const [pluginCustomCSSContent, setPluginCustomCSSContent] = useState('');
-  
+
   // Load plugin custom files on web platform
   useEffect(() => {
     const loadPluginCustomFiles = async () => {
       if (!plugin?.id || Platform.OS !== 'web') {
         return;
       }
-      
+
       try {
         const customJSPath = `${PLUGIN_STORAGE}/${plugin.id}/custom.js`;
         const customCSSPath = `${PLUGIN_STORAGE}/${plugin.id}/custom.css`;
-        
+
         // Try to load custom.js
         try {
           const jsContent = await NativeFile.readFile(customJSPath);
           setPluginCustomJSContent(jsContent);
-          console.log('[WebViewReader] Loaded custom.js for plugin:', plugin.id);
+          console.log(
+            '[WebViewReader] Loaded custom.js for plugin:',
+            plugin.id,
+          );
         } catch (err) {
-          console.warn('[WebViewReader] custom.js not found for plugin:', plugin.id);
+          console.warn(
+            '[WebViewReader] custom.js not found for plugin:',
+            plugin.id,
+          );
         }
-        
+
         // Try to load custom.css
         try {
           const cssContent = await NativeFile.readFile(customCSSPath);
           setPluginCustomCSSContent(cssContent);
-          console.log('[WebViewReader] Loaded custom.css for plugin:', plugin.id);
+          console.log(
+            '[WebViewReader] Loaded custom.css for plugin:',
+            plugin.id,
+          );
         } catch (err) {
-          console.warn('[WebViewReader] custom.css not found for plugin:', plugin.id);
+          console.warn(
+            '[WebViewReader] custom.css not found for plugin:',
+            plugin.id,
+          );
         }
       } catch (err) {
         console.warn('[WebViewReader] Error loading plugin custom files:', err);
       }
     };
-    
+
     loadPluginCustomFiles();
   }, [plugin?.id]);
-  
+
   const nextChapterScreenVisible = useRef<boolean>(false);
   const autoStartTTSRef = useRef<boolean>(false);
   const isTTSReadingRef = useRef<boolean>(false);
@@ -175,7 +187,7 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
 
   useEffect(() => {
     readerSettingsRef.current = readerSettings;
-    
+
     // Inject settings update via JavaScript instead of reloading WebView
     if (webViewLoadedRef.current && webViewRef.current) {
       webViewRef.current.injectJavaScript(`
@@ -380,12 +392,13 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
   };
 
   // Memoize the source to prevent WebView reload when settings change
-  const webViewSource = useMemo(() => ({
-    baseUrl: !chapter.isDownloaded ? plugin?.site : undefined,
-    headers: plugin?.imageRequestInit?.headers,
-    method: plugin?.imageRequestInit?.method,
-    body: plugin?.imageRequestInit?.body,
-    html: ` 
+  const webViewSource = useMemo(
+    () => ({
+      baseUrl: !chapter.isDownloaded ? plugin?.site : undefined,
+      headers: plugin?.imageRequestInit?.headers,
+      method: plugin?.imageRequestInit?.method,
+      body: plugin?.imageRequestInit?.body,
+      html: ` 
     <!DOCTYPE html>
       <html>
         <head>
@@ -410,12 +423,24 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
           :root {
             --StatusBar-currentHeight: ${StatusBar.currentHeight}px;
             --readerSettings-theme: ${initialReaderSettings.current.theme};
-            --readerSettings-padding: ${initialReaderSettings.current.padding}px;
-            --readerSettings-textSize: ${initialReaderSettings.current.textSize}px;
-            --readerSettings-textColor: ${initialReaderSettings.current.textColor};
-            --readerSettings-textAlign: ${initialReaderSettings.current.textAlign};
-            --readerSettings-lineHeight: ${initialReaderSettings.current.lineHeight};
-            --readerSettings-fontFamily: ${initialReaderSettings.current.fontFamily};
+            --readerSettings-padding: ${
+              initialReaderSettings.current.padding
+            }px;
+            --readerSettings-textSize: ${
+              initialReaderSettings.current.textSize
+            }px;
+            --readerSettings-textColor: ${
+              initialReaderSettings.current.textColor
+            };
+            --readerSettings-textAlign: ${
+              initialReaderSettings.current.textAlign
+            };
+            --readerSettings-lineHeight: ${
+              initialReaderSettings.current.lineHeight
+            };
+            --readerSettings-fontFamily: ${
+              initialReaderSettings.current.fontFamily
+            };
             --theme-primary: ${theme.primary};
             --theme-onPrimary: ${theme.onPrimary};
             --theme-secondary: ${theme.secondary};
@@ -433,11 +458,17 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
             
             @font-face {
               font-family: ${initialReaderSettings.current.fontFamily};
-              src: url("file:///android_asset/fonts/${initialReaderSettings.current.fontFamily}.ttf");
+              src: url("file:///android_asset/fonts/${
+                initialReaderSettings.current.fontFamily
+              }.ttf");
             }
             </style>
 
-          ${pluginCustomCSSContent ? `<style>${pluginCustomCSSContent}</style>` : ''}
+          ${
+            pluginCustomCSSContent
+              ? `<style>${pluginCustomCSSContent}</style>`
+              : ''
+          }
           <style>${initialReaderSettings.current.customCSS}</style>
         </head>
         <body class="${chapterGeneralSettings.pageReader ? 'page-reader' : ''}">
@@ -469,7 +500,9 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
               autoSaveInterval: 2222,
               DEBUG: __DEV__,
               strings: {
-                finished: `${getString('readerScreen.finished')}: ${chapter.name.trim()}`,
+                finished: `${getString(
+                  'readerScreen.finished',
+                )}: ${chapter.name.trim()}`,
                 nextChapter: getString('readerScreen.nextChapter', {
                   name: nextChapter?.name,
                 }),
@@ -483,25 +516,31 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
           <script src="${assetsUriPrefix}/js/text-vibe.js"></script>
           <script src="${assetsUriPrefix}/js/core.js"></script>
           <script src="${assetsUriPrefix}/js/index.js"></script>
-          ${pluginCustomJSContent ? `<script>${pluginCustomJSContent}</script>` : ''}
+          ${
+            pluginCustomJSContent
+              ? `<script>${pluginCustomJSContent}</script>`
+              : ''
+          }
           <script>
             ${initialReaderSettings.current.customJS}
           </script>
       </html>
       `,
-  }), [
-    chapter.id, // Only rebuild when chapter changes
-    chapter.isDownloaded,
-    plugin?.site,
-    plugin?.imageRequestInit?.headers,
-    plugin?.imageRequestInit?.method,
-    plugin?.imageRequestInit?.body,
-    processedHtml,
-    html,
-    pluginCustomJSContent,
-    pluginCustomCSSContent,
-    chapterGeneralSettings.pageReader,
-  ]);
+    }),
+    [
+      chapter.id, // Only rebuild when chapter changes
+      chapter.isDownloaded,
+      plugin?.site,
+      plugin?.imageRequestInit?.headers,
+      plugin?.imageRequestInit?.method,
+      plugin?.imageRequestInit?.body,
+      processedHtml,
+      html,
+      pluginCustomJSContent,
+      pluginCustomCSSContent,
+      chapterGeneralSettings.pageReader,
+    ],
+  );
 
   return (
     <WebView
@@ -516,7 +555,7 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
       onLoadEnd={() => {
         // Mark WebView as loaded
         webViewLoadedRef.current = true;
-        
+
         // Update battery level when WebView finishes loading
         const currentBatteryLevel = getBatteryLevelSync();
         webViewRef.current?.injectJavaScript(

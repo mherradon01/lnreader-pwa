@@ -14,7 +14,11 @@ import React, {
 } from 'react';
 import Color from 'color';
 
-import { BottomSheetFlashList, BottomSheetView, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetFlashList,
+  BottomSheetView,
+  BottomSheetScrollView,
+} from '@gorhom/bottom-sheet';
 import BottomSheet from '@components/BottomSheet/BottomSheet';
 import { useChapterGeneralSettings, useTheme } from '@hooks/persisted';
 import { SceneMap, TabBar, TabView } from 'react-native-tab-view';
@@ -46,7 +50,10 @@ type TabViewLabelProps = {
 
 const ReaderTab: React.FC = React.memo(() => (
   <Suspense fallback={<></>}>
-    <BottomSheetScrollView style={styles.readerTab} showsVerticalScrollIndicator={false}>
+    <BottomSheetScrollView
+      style={styles.readerTab}
+      showsVerticalScrollIndicator={false}
+    >
       <TextSizeSlider />
       <ReaderThemeSelector />
       <ReaderTextAlignSelector />
@@ -144,7 +151,12 @@ const ReaderBottomSheetV2: React.FC<ReaderBottomSheetV2Props> = ({
   const backgroundColor = tabHeaderColor;
 
   const renderScene = useMemo(
-    () => SceneMap({ readerTab: ReaderTab, generalTab: GeneralTab, ttsTab: TTSTab }),
+    () =>
+      SceneMap({
+        readerTab: ReaderTab,
+        generalTab: GeneralTab,
+        ttsTab: TTSTab,
+      }),
     [],
   );
 

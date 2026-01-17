@@ -26,7 +26,7 @@ const decodePath = (path: string) => {
 function normalizePath(path: string): string {
   const parts = path.split('/');
   const result: string[] = [];
-  
+
   for (const part of parts) {
     if (part === '..') {
       // Go up one directory
@@ -38,7 +38,7 @@ function normalizePath(path: string): string {
       result.push(part);
     }
   }
-  
+
   // Reconstruct path, preserving leading slash if present
   const normalized = result.join('/');
   return path.startsWith('/') ? '/' + normalized : normalized;
@@ -64,7 +64,7 @@ const insertLocalNovel = async (
     await updateNovelCategoryById(insertedNovel.lastInsertRowId, [2]);
     const novelDir = NOVEL_STORAGE + '/local/' + insertedNovel.lastInsertRowId;
     await NativeFile.mkdir(novelDir);
-    
+
     let coverPath = '';
     if (cover) {
       // console.log('[insertLocalNovel] Original cover path:', cover);
@@ -74,7 +74,7 @@ const insertLocalNovel = async (
       // console.log('[insertLocalNovel] Cover file name:', coverFileName);
       const coverDestPath = novelDir + '/' + coverFileName;
       // console.log('[insertLocalNovel] Cover destination path:', coverDestPath);
-      
+
       const coverExists = await NativeFile.exists(decodedPath);
       // console.log('[insertLocalNovel] Cover exists at source:', coverExists);
       if (coverExists) {
@@ -131,62 +131,85 @@ const insertLocalChapter = async (
       // console.warn('[insertLocalChapter] Could not read chapter file:', path, error);
       return [];
     }
-    
+
     if (!chapterText) {
       // console.warn('[insertLocalChapter] Chapter text is empty:', path);
       return [];
     }
-    
+
     const novelDir = NOVEL_STORAGE + '/local/' + novelId;
-    const epubCacheDir = NativeFile.getConstants().ExternalCachesDirectoryPath + '/epub';
-    
+    const epubCacheDir =
+      NativeFile.getConstants().ExternalCachesDirectoryPath + '/epub';
+
     // Rewrite resource paths - inline images as data URLs for web compatibility
     // This handles images, stylesheets, fonts, etc.
     // For very large files, skip the rewriting to avoid stack overflow
-    if (chapterText.length < 10 * 1024 * 1024) { // 10MB limit
+    if (chapterText.length < 10 * 1024 * 1024) {
+      // 10MB limit
       try {
         const chapterDirFull = path.substring(0, path.lastIndexOf('/'));
-        const chapterDirRelative = chapterDirFull.startsWith(epubCacheDir + '/') 
-          ? chapterDirFull.substring(epubCacheDir.length + 1) 
+        const chapterDirRelative = chapterDirFull.startsWith(epubCacheDir + '/')
+          ? chapterDirFull.substring(epubCacheDir.length + 1)
           : chapterDirFull;
-        
+
         // Process each src/href attribute
-        const matches = Array.from(chapterText.matchAll(/(href|src)=["']([^"']*?)["']/g));
-        
+        const matches = Array.from(
+          chapterText.matchAll(/(href|src)=["']([^"']*?)["']/g),
+        );
+
         for (const match of matches) {
           const [fullMatch, attrName, resourcePath] = match;
-          
+
           // Skip absolute URLs and data URLs
-          if (resourcePath.startsWith('http') || resourcePath.startsWith('data:')) {
+          if (
+            resourcePath.startsWith('http') ||
+            resourcePath.startsWith('data:')
+          ) {
             continue;
           }
           // Skip already-converted file:// URLs
           if (resourcePath.startsWith('file://')) {
             continue;
           }
-          
+
           // For images, inline as data URLs for web compatibility
-          if (attrName === 'src' && /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(resourcePath)) {
+          if (
+            attrName === 'src' &&
+            /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(resourcePath)
+          ) {
             try {
-              const resolvedPath = epubCacheDir + '/' + chapterDirRelative + '/' + resourcePath;
+              const resolvedPath =
+                epubCacheDir + '/' + chapterDirRelative + '/' + resourcePath;
               const normalizedPath = normalizePath(resolvedPath);
               const decodedResourcePath = decodePath(normalizedPath);
-              
+
               if (await NativeFile.exists(decodedResourcePath)) {
                 // Read image as base64
-                const base64Data = await NativeFile.readFile(decodedResourcePath);
-                
+                const base64Data = await NativeFile.readFile(
+                  decodedResourcePath,
+                );
+
                 // Determine MIME type
                 const ext = resourcePath.split('.').pop()?.toLowerCase();
-                const mimeType = ext === 'png' ? 'image/png' : 
-                               ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' :
-                               ext === 'webp' ? 'image/webp' :
-                               ext === 'gif' ? 'image/gif' :
-                               ext === 'svg' ? 'image/svg+xml' : 'image/png';
-                
+                const mimeType =
+                  ext === 'png'
+                    ? 'image/png'
+                    : ext === 'jpg' || ext === 'jpeg'
+                    ? 'image/jpeg'
+                    : ext === 'webp'
+                    ? 'image/webp'
+                    : ext === 'gif'
+                    ? 'image/gif'
+                    : ext === 'svg'
+                    ? 'image/svg+xml'
+                    : 'image/png';
+
                 // Replace with data URL
                 const dataUrl = `data:${mimeType};base64,${base64Data}`;
-                chapterText = chapterText.replace(fullMatch, `${attrName}="${dataUrl}"`);
+                chapterText = chapterText.replace(
+                  fullMatch,
+                  `${attrName}="${dataUrl}"`,
+                );
               }
             } catch (error) {
               // console.warn('[insertLocalChapter] Failed to inline image:', resourcePath, error);
@@ -194,9 +217,13 @@ const insertLocalChapter = async (
           }
           // For CSS and other resources, keep relative paths but point to cache
           else {
-            const resolvedPath = epubCacheDir + '/' + chapterDirRelative + '/' + resourcePath;
+            const resolvedPath =
+              epubCacheDir + '/' + chapterDirRelative + '/' + resourcePath;
             const normalizedPath = normalizePath(resolvedPath);
-            chapterText = chapterText.replace(fullMatch, `${attrName}="file://${normalizedPath}"`);
+            chapterText = chapterText.replace(
+              fullMatch,
+              `${attrName}="file://${normalizedPath}"`,
+            );
           }
         }
       } catch (error) {
@@ -205,7 +232,7 @@ const insertLocalChapter = async (
     } else {
       // console.log('[insertLocalChapter] Chapter HTML too large, skipping path rewriting');
     }
-    
+
     await NativeFile.mkdir(novelDir + '/' + insertedChapter.lastInsertRowId);
     await NativeFile.writeFile(
       novelDir + '/' + insertedChapter.lastInsertRowId + '/index.html',
@@ -240,7 +267,7 @@ export const importEpub = async (
   const epubFilePath =
     NativeFile.getConstants().ExternalCachesDirectoryPath + '/novel.epub';
   // console.log('[importEpub] Copying file to:', epubFilePath);
-  
+
   // Check if URI is a cache key (starts with 'file_') or a direct URI
   if (uri.startsWith('file_')) {
     // console.log('[importEpub] Retrieving file from cache with key:', uri);
@@ -248,11 +275,11 @@ export const importEpub = async (
     if (!blob) {
       throw new Error('Cached EPUB file not found: ' + uri);
     }
-    
+
     // Convert blob to array buffer and write to file
     const arrayBuffer = await blob.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
-    
+
     // Use chunked approach to avoid stack overflow with large files
     let binaryString = '';
     const chunkSize = 8192;
@@ -261,9 +288,9 @@ export const importEpub = async (
       binaryString += String.fromCharCode(...chunk);
     }
     const base64 = btoa(binaryString);
-    
+
     await NativeFile.writeFile(epubFilePath, base64);
-    
+
     // Clean up the cache after retrieval
     clearCachedFile(uri).catch(_err => {
       // console.warn('[importEpub] Failed to cleanup cached file:', err);
@@ -272,7 +299,7 @@ export const importEpub = async (
     // Direct URI (data URI or file path)
     await NativeFile.copyFile(uri, epubFilePath);
   }
-  
+
   // console.log('[importEpub] File copied successfully');
 
   const epubDirPath =
@@ -293,11 +320,11 @@ export const importEpub = async (
   // console.log('[importEpub] Novel parsed:', { name: novel.name, chapters: novel.chapters?.length });
   // console.log('[importEpub] Image paths from parser:', novel.imagePaths);
   // console.log('[importEpub] CSS paths from parser:', novel.cssPaths);
-  
+
   if (!novel.name) {
     novel.name = filename.replace('.epub', '') || 'Untitled';
   }
-  
+
   const novelId = await insertLocalNovel(
     novel.name,
     epubDirPath + novel.name, // temporary
@@ -308,7 +335,7 @@ export const importEpub = async (
   );
   const now = dayjs().toISOString();
   // console.log('[importEpub] Processing', novel.chapters?.length || 0, 'chapters');
-  
+
   if (novel.chapters && Array.isArray(novel.chapters)) {
     for (let i = 0; i < novel.chapters.length; i++) {
       const chapter = novel.chapters[i];

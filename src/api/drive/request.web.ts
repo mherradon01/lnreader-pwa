@@ -35,15 +35,18 @@ export const list = async (
       Accept: 'application/json',
     },
   });
-  
+
   const data = await response.json();
-  
+
   if (!response.ok) {
     // eslint-disable-next-line no-console
     console.error('Google Drive API error:', data);
-    throw new Error(data.error?.message || `API request failed with status ${response.status}`);
+    throw new Error(
+      data.error?.message ||
+        `API request failed with status ${response.status}`,
+    );
   }
-  
+
   return data;
 };
 
@@ -58,9 +61,9 @@ export const create = async (
   };
   const url =
     (data.content ? MEDIA_UPLOAD_URL : BASE_URL) + '?' + buildParams(params);
-  
+
   data.metadata.name = data.metadata.name.replace(/\//g, PATH_SEPARATOR);
-  
+
   let body: BodyInit;
   const headers: Record<string, string> = {
     Authorization: `Bearer ${accessToken}`,
@@ -73,21 +76,19 @@ export const create = async (
     const delimiter = '\r\n--' + boundary + '\r\n';
     const closeDelimiter = '\r\n--' + boundary + '--';
 
-    const metadataPart = 
+    const metadataPart =
       'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
       JSON.stringify(data.metadata);
 
     let contentPart: string;
     if (data.metadata.mimeType === 'application/json') {
-      contentPart = 
-        `Content-Type: ${data.metadata.mimeType}\r\n\r\n` +
-        data.content;
+      contentPart =
+        `Content-Type: ${data.metadata.mimeType}\r\n\r\n` + data.content;
     } else {
       // For binary data, we'll need to handle it differently
       // For now, assume it's text/json content
-      contentPart = 
-        `Content-Type: ${data.metadata.mimeType}\r\n\r\n` +
-        data.content;
+      contentPart =
+        `Content-Type: ${data.metadata.mimeType}\r\n\r\n` + data.content;
     }
 
     body = delimiter + metadataPart + delimiter + contentPart + closeDelimiter;
@@ -138,27 +139,31 @@ export const uploadMedia = async (
 ): Promise<DriveFile> => {
   // Web doesn't support native zip operations
   // This would need IndexedDB/localStorage export instead
-  throw new Error('uploadMedia is not supported on web platform. Use create() for JSON data backup instead.');
+  throw new Error(
+    'uploadMedia is not supported on web platform. Use create() for JSON data backup instead.',
+  );
 };
 
 export const download = async (_file: DriveFile, _distDirPath: string) => {
   // Web doesn't support native zip operations
   // This would need IndexedDB/localStorage import instead
-  throw new Error('download is not supported on web platform. Use downloadFile() for JSON data restore instead.');
+  throw new Error(
+    'download is not supported on web platform. Use downloadFile() for JSON data restore instead.',
+  );
 };
 
 // Web-specific: Download file content as text
 export const downloadFile = async (file: DriveFile): Promise<string> => {
   const { accessToken } = await GoogleSignin.getTokens();
   const url = BASE_URL + '/' + file.id + '?alt=media';
-  
+
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: 'application/json',
     },
   });
-  
+
   return response.text();
 };
 
@@ -166,13 +171,13 @@ export const downloadFile = async (file: DriveFile): Promise<string> => {
 export const downloadFileJson = async <T>(file: DriveFile): Promise<T> => {
   const { accessToken } = await GoogleSignin.getTokens();
   const url = BASE_URL + '/' + file.id + '?alt=media';
-  
+
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: 'application/json',
     },
   });
-  
+
   return response.json();
 };

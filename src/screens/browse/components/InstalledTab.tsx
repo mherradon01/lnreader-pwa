@@ -82,8 +82,10 @@ export const InstalledTab = memo(
         );
       }
       // When not searching, show unpinned plugins in main list
-      // If there are no unpinned plugins, show pinned ones here instead  
-      return unpinnedPluginsList.length > 0 ? unpinnedPluginsList : pinnedPluginsList;
+      // If there are no unpinned plugins, show pinned ones here instead
+      return unpinnedPluginsList.length > 0
+        ? unpinnedPluginsList
+        : pinnedPluginsList;
     }, [searchText, pinnedPluginsList, unpinnedPluginsList]);
 
     const renderItem = useCallback(

@@ -48,7 +48,7 @@ const SettingsBrowseScreen = ({
   const upsertRepository = useCallback(
     (repositoryUrl: string, repository?: Repository) => {
       const trimmedUrl = repositoryUrl?.trim() || '';
-      
+
       if (
         !trimmedUrl ||
         !new RegExp(/https?:\/\/(.*)plugins\.min\.json/).test(trimmedUrl)

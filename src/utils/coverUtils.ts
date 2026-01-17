@@ -11,36 +11,40 @@ const blobUrlCache = new Map<string, { url: string; blob: Blob }>();
  * This utility converts file:// URLs to blob URLs for web platform.
  * Also proxies cross-origin HTTP(S) URLs to bypass CORS.
  */
-export const getWebSafeCoverUri = async (coverUri: string | undefined | null): Promise<string> => {
+export const getWebSafeCoverUri = async (
+  coverUri: string | undefined | null,
+): Promise<string> => {
   if (!coverUri) {
     return defaultCover;
   }
 
   // On web, proxy cross-origin HTTP(S) URLs to bypass CORS
-  if (Platform.OS === 'web' && (coverUri.startsWith('http://') || coverUri.startsWith('https://'))) {
+  if (
+    Platform.OS === 'web' &&
+    (coverUri.startsWith('http://') || coverUri.startsWith('https://'))
+  ) {
     return proxyUrl(coverUri);
   }
 
   // On web, file:// URLs need to be converted to blob URLs
   if (Platform.OS === 'web' && coverUri.startsWith('file://')) {
-    
     // Check cache first
     if (blobUrlCache.has(coverUri)) {
       const cached = blobUrlCache.get(coverUri)!;
       return cached.url;
     }
-    
+
     try {
       // Remove file:// prefix and query params for reading
       const filePath = coverUri.replace(/^file:\/\//, '').split('?')[0];
-      
+
       // Read the file from IndexedDB with metadata - open without version to use current
       const database = await (async () => {
         return new Promise<IDBDatabase>((resolve, reject) => {
           const request = indexedDB.open('LNReaderFileSystem');
           request.onsuccess = () => resolve(request.result);
           request.onerror = () => reject(request.error);
-          request.onupgradeneeded = (event) => {
+          request.onupgradeneeded = event => {
             const db = (event.target as IDBOpenDBRequest).result;
             if (!db.objectStoreNames.contains('files')) {
               db.createObjectStore('files', { keyPath: 'path' });
@@ -81,16 +85,22 @@ export const getWebSafeCoverUri = async (coverUri: string | undefined | null): P
 
       // Determine MIME type from extension
       const ext = filePath.split('.').pop()?.toLowerCase();
-      const mimeType = ext === 'png' ? 'image/png' : 
-                       ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' :
-                       ext === 'webp' ? 'image/webp' :
-                       ext === 'gif' ? 'image/gif' : 'image/png';
+      const mimeType =
+        ext === 'png'
+          ? 'image/png'
+          : ext === 'jpg' || ext === 'jpeg'
+          ? 'image/jpeg'
+          : ext === 'webp'
+          ? 'image/webp'
+          : ext === 'gif'
+          ? 'image/gif'
+          : 'image/png';
       const blob = new Blob([byteArray], { type: mimeType });
       const blobUrl = URL.createObjectURL(blob);
-      
+
       // Cache both the blob and URL to keep blob in memory
       blobUrlCache.set(coverUri, { url: blobUrl, blob });
-      
+
       return blobUrl;
     } catch (error) {
       // File doesn't exist locally - just use the default

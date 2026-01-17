@@ -24,10 +24,10 @@ import { HistoryScreenProps } from '@navigators/types';
 
 const HistoryScreen = ({ navigation }: HistoryScreenProps) => {
   const theme = useTheme();
-  
+
   // Blur focused element when leaving screen to prevent aria-hidden warning on web
   useBlurOnUnfocus();
-  
+
   const {
     isLoading,
     history,

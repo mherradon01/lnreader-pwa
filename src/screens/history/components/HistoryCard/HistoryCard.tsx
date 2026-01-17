@@ -65,10 +65,7 @@ const HistoryCard: React.FC<HistoryCardProps> = ({
             })
           }
         >
-          <Image
-            source={{ uri: coverUri }}
-            style={styles.cover}
-          />
+          <Image source={{ uri: coverUri }} style={styles.cover} />
         </Pressable>
         <View style={styles.detailsContainer}>
           <Text

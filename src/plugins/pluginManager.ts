@@ -116,9 +116,10 @@ const installPlugin = async (
       NativeFile.unlink(customCSSPath);
     }
     await NativeFile.writeFile(pluginPath, rawCode);
-    
+
     // Update the INSTALL_PLUGINS list in MMKV so UI shows it as installed
-    const installedPlugins = getMMKVObject<PluginItem[]>('INSTALL_PLUGINS') || [];
+    const installedPlugins =
+      getMMKVObject<PluginItem[]>('INSTALL_PLUGINS') || [];
     const pluginToAdd: PluginItem = {
       ..._plugin,
       version: currentPlugin.version,
@@ -162,25 +163,29 @@ const fetchPlugins = async (): Promise<PluginItem[]> => {
     allRepositories.map(async ({ url }) => {
       const response = await proxyFetch(url);
       const contentType = response.headers.get('content-type') || '';
-      
+
       // Get response text once
       const text = await response.text();
-      
+
       // Check if it looks like HTML (error page)
       if (text.trim().startsWith('<!') || text.trim().startsWith('<html')) {
+        // eslint-disable-next-line no-console
         console.error('[fetchPlugins] Received HTML instead of JSON:', {
           url,
           contentType,
           status: response.status,
           textPreview: text.substring(0, 200),
         });
-        throw new Error(`Received HTML error page instead of JSON (status: ${response.status})`);
+        throw new Error(
+          `Received HTML error page instead of JSON (status: ${response.status})`,
+        );
       }
-      
+
       // Try to parse as JSON
       try {
         return JSON.parse(text);
       } catch (err) {
+        // eslint-disable-next-line no-console
         console.error('[fetchPlugins] Failed to parse JSON:', {
           url,
           contentType,
@@ -188,7 +193,11 @@ const fetchPlugins = async (): Promise<PluginItem[]> => {
           textPreview: text.substring(0, 200),
           error: err instanceof Error ? err.message : 'Unknown error',
         });
-        throw new Error(`Failed to parse repository response as JSON: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        throw new Error(
+          `Failed to parse repository response as JSON: ${
+            err instanceof Error ? err.message : 'Unknown error'
+          }`,
+        );
       }
     }),
   );
@@ -200,26 +209,44 @@ const fetchPlugins = async (): Promise<PluginItem[]> => {
         // 1. Direct array: [{id, name, ...}, ...]
         // 2. Object with plugins property: {plugins: [{id, name, ...}, ...]}
         // 3. Object with data property: {data: [{id, name, ...}, ...]}
-        let plugins: any[] = [];
-        
+        let repoPluginsArray: any[] = [];
+
         if (Array.isArray(repoPlugins.value)) {
-          plugins = repoPlugins.value;
-        } else if (repoPlugins.value?.plugins && Array.isArray(repoPlugins.value.plugins)) {
-          plugins = repoPlugins.value.plugins;
-        } else if (repoPlugins.value?.data && Array.isArray(repoPlugins.value.data)) {
-          plugins = repoPlugins.value.data;
+          repoPluginsArray = repoPlugins.value;
+        } else if (
+          repoPlugins.value?.plugins &&
+          Array.isArray(repoPlugins.value.plugins)
+        ) {
+          repoPluginsArray = repoPlugins.value.plugins;
+        } else if (
+          repoPlugins.value?.data &&
+          Array.isArray(repoPlugins.value.data)
+        ) {
+          repoPluginsArray = repoPlugins.value.data;
         }
-        
-        if (plugins.length > 0) {
-          allPlugins.push(...plugins);
+
+        if (repoPluginsArray.length > 0) {
+          allPlugins.push(...repoPluginsArray);
         } else if (Object.keys(repoPlugins.value || {}).length > 0) {
-          showToast(`Repository ${index + 1}: Invalid format, no plugins found`);
+          showToast(
+            `Repository ${index + 1}: Invalid format, no plugins found`,
+          );
         }
       } catch (error) {
-        showToast(`Repository ${index + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        showToast(
+          `Repository ${index + 1}: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`,
+        );
       }
     } else {
-      showToast(`Repository ${index + 1}: ${repoPlugins.reason?.message || repoPlugins.reason?.toString() || 'Unknown error'}`);
+      showToast(
+        `Repository ${index + 1}: ${
+          repoPlugins.reason?.message ||
+          repoPlugins.reason?.toString() ||
+          'Unknown error'
+        }`,
+      );
     }
   });
 
@@ -236,7 +263,7 @@ const getPlugin = (pluginId: string) => {
     try {
       // Use readFileSync on web, readFile on native
       let code: string;
-      
+
       // Check if we're on web and if readFileSync exists
       if (typeof (NativeFile as any).readFileSync === 'function') {
         // console.log('[pluginManager.getPlugin] Using sync read for plugin:', pluginId);
@@ -253,7 +280,7 @@ const getPlugin = (pluginId: string) => {
         // console.error('[pluginManager.getPlugin] readFileSync not available, plugin loading will fail:', pluginId);
         return undefined;
       }
-      
+
       const plugin = initPlugin(pluginId, code);
       plugins[pluginId] = plugin;
     } catch (err) {
@@ -282,7 +309,7 @@ const loadPlugin = async (pluginId: string) => {
     // Use async readFile to load from IndexedDB
     const code = await (NativeFile as any).readFile(filePath);
     // console.log('[pluginManager.loadPlugin] Successfully loaded plugin code, initializing:', pluginId);
-    
+
     const plugin = initPlugin(pluginId, code);
     plugins[pluginId] = plugin;
     // console.log('[pluginManager.loadPlugin] Plugin initialized successfully:', pluginId);
@@ -295,21 +322,21 @@ const loadPlugin = async (pluginId: string) => {
 
 const preLoadInstalledPlugins = async (installedPluginIds: string[]) => {
   // console.log('[pluginManager.preLoadInstalledPlugins] Pre-loading installed plugins:', installedPluginIds);
-  
+
   // Load all installed plugins in parallel
   const loadPromises = installedPluginIds
     .filter(id => id !== LOCAL_PLUGIN_ID)
-    .map(pluginId => 
+    .map(pluginId =>
       loadPlugin(pluginId).catch(_err => {
         // console.warn('[pluginManager.preLoadInstalledPlugins] Failed to pre-load plugin:', pluginId, _err);
         return undefined;
-      })
+      }),
     );
-  
+
   const results = await Promise.all(loadPromises);
   // const loaded = results.filter(p => p !== undefined).length;
   // console.log(`[pluginManager.preLoadInstalledPlugins] Pre-loaded ${loaded}/${installedPluginIds.length} plugins`);
-  
+
   return results;
 };
 

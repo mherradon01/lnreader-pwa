@@ -23,7 +23,7 @@ const initDB = (): Promise<IDBDatabase> => {
       resolve(dbInstance);
     };
 
-    request.onupgradeneeded = (event) => {
+    request.onupgradeneeded = event => {
       const database = (event.target as IDBOpenDBRequest).result;
       if (!database.objectStoreNames.contains(STORE_NAME)) {
         database.createObjectStore(STORE_NAME, { keyPath: 'id' });
@@ -38,7 +38,10 @@ const initDB = (): Promise<IDBDatabase> => {
  * @param blob File blob
  * @returns Reference key to retrieve the file later
  */
-export async function cacheEPUBFile(filename: string, blob: Blob): Promise<string> {
+export async function cacheEPUBFile(
+  filename: string,
+  blob: Blob,
+): Promise<string> {
   const db = await initDB();
   const id = `epub_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 

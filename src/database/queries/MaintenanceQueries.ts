@@ -53,7 +53,10 @@ export const cleanupNovelFiles = async (novel: NovelInfo) => {
     // Log but don't throw - file cleanup failure shouldn't break the flow
     if (__DEV__) {
       // eslint-disable-next-line no-console
-      console.warn('[MaintenanceQueries] Failed to delete novel directory:', error);
+      console.warn(
+        '[MaintenanceQueries] Failed to delete novel directory:',
+        error,
+      );
     }
   }
 };
@@ -210,7 +213,11 @@ export const cleanupOrphanedFiles = async (): Promise<number> => {
               // Continue even if single deletion fails
               if (__DEV__) {
                 // eslint-disable-next-line no-console
-                console.warn('[MaintenanceQueries] Failed to delete orphaned path:', novelPath, e);
+                console.warn(
+                  '[MaintenanceQueries] Failed to delete orphaned path:',
+                  novelPath,
+                  e,
+                );
               }
             }
           }
@@ -219,7 +226,11 @@ export const cleanupOrphanedFiles = async (): Promise<number> => {
         // Continue to next plugin directory
         if (__DEV__) {
           // eslint-disable-next-line no-console
-          console.warn('[MaintenanceQueries] Failed to list plugin directory:', pluginPath, e);
+          console.warn(
+            '[MaintenanceQueries] Failed to list plugin directory:',
+            pluginPath,
+            e,
+          );
         }
       }
     }
@@ -316,6 +327,7 @@ export const verifyDownloadedChapters = async (): Promise<number> => {
       }
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('[verifyDownloadedChapters] Error:', error);
   }
 
@@ -333,7 +345,7 @@ export const runStartupCleanup = async (): Promise<{
   fixedDownloads: number;
 }> => {
   const fixedDownloads = await verifyDownloadedChapters();
-  
+
   return {
     orphanedChapters: deleteOrphanedChapters(),
     orphanedNovelCategories: deleteOrphanedNovelCategories(),

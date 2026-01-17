@@ -1,6 +1,6 @@
 /**
  * Reader Assets - Inline assets for the WebView reader
- * 
+ *
  * This component provides all necessary CSS and JS for the reader
  * by inlining them directly into the HTML, eliminating the need
  * for external server access on localhost:8001

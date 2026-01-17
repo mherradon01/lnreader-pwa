@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 /**
  * Converts file:// URLs in HTML content to blob URLs that can be loaded in a WebView
  * This is necessary on web because browsers block file:// URL access for security reasons
- * 
+ *
  * Note: Files must exist in the virtual filesystem (IndexedDB) to be converted.
  * Missing files will be left as-is (browser will show broken image/resource indicators).
  */
@@ -25,7 +25,7 @@ export async function processHtmlForWeb(htmlContent: string): Promise<string> {
   while ((match = fileUrlRegex.exec(htmlContent)) !== null) {
     const filePath = match[1];
     const fullUrl = `file://${filePath}`;
-    
+
     if (!fileUrls.has(fullUrl) && !filePath.includes('undefined')) {
       fileUrls.set(fullUrl, ''); // Placeholder, will be filled in next pass
     }
@@ -34,13 +34,13 @@ export async function processHtmlForWeb(htmlContent: string): Promise<string> {
   // Second pass: convert each file URL to a blob URL
   for (const [fullUrl, _] of fileUrls) {
     const filePath = fullUrl.replace('file://', '');
-    
+
     try {
       // Determine the MIME type based on file extension
       const ext = filePath.toLowerCase().split('.').pop();
       let mimeType = 'application/octet-stream';
       let isImage = false;
-      
+
       if (ext === 'css') {
         mimeType = 'text/css';
       } else if (['jpg', 'jpeg'].includes(ext || '')) {
@@ -70,7 +70,7 @@ export async function processHtmlForWeb(htmlContent: string): Promise<string> {
         // console.warn('[processHtmlForWeb] File not found, skipping:', filePath, 'error:', error);
         continue;
       }
-      
+
       if (!content) {
         // Empty content - skip silently
         // console.warn('[processHtmlForWeb] File is empty, skipping:', filePath);
@@ -78,7 +78,7 @@ export async function processHtmlForWeb(htmlContent: string): Promise<string> {
       }
 
       let blobUrl = '';
-      
+
       try {
         if (isImage || mimeType.startsWith('image/')) {
           // For image files, content should be base64 encoded

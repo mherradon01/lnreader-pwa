@@ -161,7 +161,7 @@ function RestoreBackup({
   closeModal: () => void;
 }) {
   const [backupList, setBackupList] = useState<DriveFile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   useEffect(() => {
     setLoading(true);
     exists('LNReader', true, undefined, true)
@@ -177,7 +177,11 @@ function RestoreBackup({
       .catch(error => {
         // eslint-disable-next-line no-console
         console.error('Error loading backups:', error);
-        showToast(`Failed to load backups: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        showToast(
+          `Failed to load backups: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`,
+        );
       })
       .finally(() => {
         setLoading(false);
@@ -244,12 +248,12 @@ export default function GoogleDriveModal({
 }: GoogleDriveModalProps) {
   const [backupModal, setBackupModal] = useState(BackupModal.UNAUTHORIZED);
   const [user, setUser] = useState<User | null | undefined>(null);
-  
+
   useEffect(() => {
     GoogleSignin.configure({
       scopes: ['https://www.googleapis.com/auth/drive.file'],
     });
-    
+
     const isSignedIn = GoogleSignin.hasPreviousSignIn();
     if (isSignedIn) {
       const localUser = GoogleSignin.getCurrentUser();

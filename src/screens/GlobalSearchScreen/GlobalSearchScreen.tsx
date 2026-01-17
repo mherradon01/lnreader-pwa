@@ -42,8 +42,6 @@ const GlobalSearchScreen = (props: Props) => {
     hasResultsOnly,
   });
 
-  console.log('[GlobalSearchScreen] Rendering with searchResults:', searchResults.length, 'progress:', progress);
-
   return (
     <SafeAreaView style={styles.container}>
       <Appbar

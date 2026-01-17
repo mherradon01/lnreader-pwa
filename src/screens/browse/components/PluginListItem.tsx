@@ -237,7 +237,11 @@ export const PluginListItem = memo(
                   setMenuVisible(false);
                   handlePinPress({ close: () => {} });
                 }}
-                title={isPluginPinned ? getString('browseScreen.unpin') : getString('browseScreen.pin')}
+                title={
+                  isPluginPinned
+                    ? getString('browseScreen.unpin')
+                    : getString('browseScreen.pin')
+                }
                 leadingIcon={isPluginPinned ? 'pin-off' : 'pin'}
               />
               <Menu.Item

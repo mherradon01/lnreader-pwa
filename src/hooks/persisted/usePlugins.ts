@@ -71,7 +71,7 @@ export default function usePlugins() {
   const refreshPlugins = useCallback(() => {
     const installedPlugins =
       getMMKVObject<PluginItem[]>(INSTALLED_PLUGINS) || [];
-    
+
     // Pre-load all installed plugins in the background
     const installedPluginIds = installedPlugins.map(p => p.id);
     if (installedPluginIds.length > 0) {
@@ -79,7 +79,7 @@ export default function usePlugins() {
         // comment.warn('[usePlugins.refreshPlugins] Error pre-loading plugins:', _err);
       });
     }
-    
+
     return fetchPlugins().then(fetchedPlugins => {
       // Update installed plugins with update status
       fetchedPlugins.forEach(plg => {

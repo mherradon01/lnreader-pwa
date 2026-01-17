@@ -23,7 +23,7 @@ const initDB = (): Promise<IDBDatabase> => {
       resolve(dbInstance);
     };
 
-    request.onupgradeneeded = (event) => {
+    request.onupgradeneeded = event => {
       const database = (event.target as IDBOpenDBRequest).result;
       if (!database.objectStoreNames.contains(STORE_NAME)) {
         database.createObjectStore(STORE_NAME, { keyPath: 'key' });
@@ -36,11 +36,13 @@ const initDB = (): Promise<IDBDatabase> => {
  * Store a large file blob in IndexedDB and return a cache key
  */
 export async function cacheFile(blob: Blob, filename: string): Promise<string> {
-  const cacheKey = `file_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-  
+  const cacheKey = `file_${Date.now()}_${Math.random()
+    .toString(36)
+    .substring(7)}`;
+
   try {
     const db = await initDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
@@ -69,7 +71,7 @@ export async function cacheFile(blob: Blob, filename: string): Promise<string> {
 export async function getCachedFile(cacheKey: string): Promise<Blob> {
   try {
     const db = await initDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
@@ -97,7 +99,7 @@ export async function getCachedFile(cacheKey: string): Promise<Blob> {
 export async function clearCachedFile(cacheKey: string): Promise<void> {
   try {
     const db = await initDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
@@ -120,7 +122,7 @@ export async function clearCachedFile(cacheKey: string): Promise<void> {
 export async function clearAllCachedFiles(): Promise<void> {
   try {
     const db = await initDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);

@@ -29,7 +29,12 @@ import { Banner } from './components/Banner';
 import { Actionbar } from '@components/Actionbar/Actionbar';
 
 import { useAppSettings, useHistory, useTheme } from '@hooks/persisted';
-import { useSearch, useBackHandler, useBoolean, useBlurOnUnfocus } from '@hooks';
+import {
+  useSearch,
+  useBackHandler,
+  useBoolean,
+  useBlurOnUnfocus,
+} from '@hooks';
 import { getString } from '@strings/translations';
 import { FAB, Portal } from 'react-native-paper';
 import {
@@ -75,10 +80,10 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const { left: leftInset, right: rightInset } = useSafeAreaInsets();
-  
+
   // Blur focused element when leaving screen to prevent aria-hidden warning on web
   useBlurOnUnfocus();
-  
+
   const {
     library,
     categories,

@@ -33,7 +33,9 @@ let dbInstance: Awaited<ReturnType<typeof openDatabaseAsync>> | null = null;
 // Get the database instance (throws if not initialized)
 export const getDb = () => {
   if (!dbInstance) {
-    throw new Error('Database not initialized. Call initializeDatabaseAsync first.');
+    throw new Error(
+      'Database not initialized. Call initializeDatabaseAsync first.',
+    );
   }
   return dbInstance;
 };
@@ -56,7 +58,7 @@ export const db = new Proxy({} as any, {
  */
 const createInitialSchemaAsync = async () => {
   const database = getDb();
-  
+
   await database.execAsync('PRAGMA journal_mode = WAL');
   await database.execAsync('PRAGMA synchronous = NORMAL');
   await database.execAsync('PRAGMA temp_store = MEMORY');
@@ -87,7 +89,7 @@ export const initializeDatabaseAsync = async () => {
   // Open database asynchronously
   dbInstance = await openDatabaseAsync(dbName);
   const database = dbInstance;
-  
+
   await database.execAsync('PRAGMA busy_timeout = 5000');
   await database.execAsync('PRAGMA cache_size = 10000');
   await database.execAsync('PRAGMA foreign_keys = ON');
@@ -101,7 +103,6 @@ export const initializeDatabaseAsync = async () => {
   } catch (_error) {
     // If PRAGMA query fails, assume fresh database
     if (__DEV__) {
-       
       // comment.warn(
       //   'Failed to get database version, assuming fresh install:',
       //   _error,
@@ -123,7 +124,7 @@ export const initializeDatabaseAsync = async () => {
 export const recreateDatabaseIndexesAsync = async () => {
   try {
     const database = getDb();
-    
+
     await database.execAsync('PRAGMA analysis_limit=4000');
     await database.execAsync('PRAGMA optimize');
 

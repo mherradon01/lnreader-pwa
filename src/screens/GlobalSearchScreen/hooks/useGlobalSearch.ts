@@ -53,14 +53,14 @@ export const useGlobalSearch = ({
         return;
       }
       lastSearch.current = searchText;
-      
+
       // If no plugins are installed, set empty results
       if (filteredInstalledPlugins.length === 0) {
         setSearchResults([]);
         setProgress(0);
         return;
       }
-      
+
       const defaultResult: GlobalSearchResult[] = filteredInstalledPlugins.map(
         plugin => ({
           isLoading: true,
@@ -80,16 +80,12 @@ export const useGlobalSearch = ({
           // Try sync getPlugin first (cached), fallback to async loadPlugin for web
           let plugin = getPlugin(_plugin.id);
           if (!plugin) {
-            console.log('[GlobalSearch] Plugin not in cache, loading:', _plugin.id);
             plugin = await loadPlugin(_plugin.id);
           }
           if (!plugin) {
-            console.error('[GlobalSearch] Failed to load plugin:', _plugin.id);
             throw new Error(`Failed to load plugin: ${_plugin.name}`);
           }
-          console.log('[GlobalSearch] Searching in plugin:', _plugin.id);
           const res = await plugin.searchNovels(searchText, 1);
-          console.log('[GlobalSearch] Search results for', _plugin.id, ':', res.length, 'novels');
 
           try {
             setSearchResults(prevState =>
@@ -102,11 +98,9 @@ export const useGlobalSearch = ({
                 .sort(novelResultSorter),
             );
           } catch (stateError: any) {
-            console.error('[GlobalSearch] Error updating state for plugin:', _plugin.id, stateError);
             throw stateError;
           }
         } catch (error: any) {
-          console.error('[GlobalSearch] Error searching in plugin:', _plugin.id, error);
           const errorMessage = error?.message || String(error);
           try {
             setSearchResults(prevState =>
@@ -124,7 +118,6 @@ export const useGlobalSearch = ({
                 .sort(novelResultSorter),
             );
           } catch (stateError: any) {
-            console.error('[GlobalSearch] Error updating error state for plugin:', _plugin.id, stateError);
             // Don't rethrow here - we want to continue with other plugins
           }
         }
@@ -155,8 +148,7 @@ export const useGlobalSearch = ({
                   );
                 }
               })
-              .catch((err) => {
-                console.error('[GlobalSearch] Unhandled error in searchInPlugin:', err);
+              .catch(_err => {
                 running--;
                 // Still update progress even on error
                 if (lastSearch.current === searchText) {
@@ -178,7 +170,7 @@ export const useGlobalSearch = ({
             try {
               await searchInPlugin(_plugin);
             } catch (err) {
-              console.error('[GlobalSearch] Unhandled error in searchInPlugin:', err);
+              // Ignore error and continue with next plugin
             }
             if (lastSearch.current === searchText) {
               setProgress(
@@ -209,18 +201,14 @@ export const useGlobalSearch = ({
   }, [defaultSearchText, debouncedGlobalSearch]);
 
   const filteredSearchResults = useMemo(() => {
-    console.log('[GlobalSearch] Filtering results. Total:', searchResults.length, 'hasResultsOnly:', hasResultsOnly);
     if (!hasResultsOnly) {
       return searchResults;
     }
-    const filtered = searchResults.filter(
+    return searchResults.filter(
       result => !result.isLoading && !result.error && result.novels.length > 0,
     );
-    console.log('[GlobalSearch] Filtered results:', filtered.length);
-    return filtered;
   }, [searchResults, hasResultsOnly]);
 
-  console.log('[GlobalSearch] Returning searchResults:', filteredSearchResults.length, 'progress:', progress);
   return { searchResults: filteredSearchResults, globalSearch, progress };
 };
 

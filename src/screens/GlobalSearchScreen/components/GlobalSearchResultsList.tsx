@@ -30,17 +30,12 @@ const GlobalSearchResultsList: React.FC<GlobalSearchResultsListProps> = ({
     [],
   );
 
-  console.log('[GlobalSearchResultsList] Rendering with', searchResults.length, 'results');
-
   return (
     <FlatList<GlobalSearchResult>
       keyExtractor={keyExtractor}
       data={searchResults}
       contentContainerStyle={styles.resultList}
-      renderItem={({ item }) => {
-        console.log('[GlobalSearchResultsList] Rendering item:', item.plugin.id, 'isLoading:', item.isLoading, 'novels:', item.novels.length);
-        return <GlobalSearchSourceResults item={item} />;
-      }}
+      renderItem={({ item }) => <GlobalSearchSourceResults item={item} />}
       ListEmptyComponent={ListEmptyComponent}
     />
   );

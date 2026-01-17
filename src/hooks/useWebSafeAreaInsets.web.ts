@@ -35,20 +35,20 @@ export function useWebSafeAreaInsets(): SafeAreaInsets {
       div.style.left = 'env(safe-area-inset-left, 0px)';
       div.style.visibility = 'hidden';
       div.style.pointerEvents = 'none';
-      
+
       document.body.appendChild(div);
-      
+
       const computedStyle = window.getComputedStyle(div);
-      
+
       const newInsets = {
         top: parseFloat(computedStyle.top) || 0,
         right: parseFloat(computedStyle.right) || 0,
         bottom: parseFloat(computedStyle.bottom) || 0,
         left: parseFloat(computedStyle.left) || 0,
       };
-      
+
       document.body.removeChild(div);
-      
+
       setInsets(newInsets);
     };
 
