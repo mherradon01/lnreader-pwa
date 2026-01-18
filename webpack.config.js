@@ -8,7 +8,7 @@ module.exports = (env, argv) => {
   const isDev = argv.mode === 'development';
 
   return {
-    entry: './index.web.tsx',
+    entry: ['./shims/require-polyfill.web.js', './index.web.tsx'],
     output: {
       path: path.resolve(__dirname, 'web-build'),
       filename: isDev ? '[name].js' : '[name].[contenthash].js',

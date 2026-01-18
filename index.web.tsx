@@ -1,5 +1,4 @@
 import 'react-native-url-polyfill/auto';
-import './shims/require-polyfill.web';
 import { AppRegistry } from 'react-native';
 import { unstable_batchedUpdates } from 'react-dom';
 import { initializeMMKVAsync } from './shims/react-native-mmkv.web';
