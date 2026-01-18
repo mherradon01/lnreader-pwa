@@ -304,41 +304,28 @@ module.exports = (env, argv) => {
         },
         {
           test: /\.(ts|tsx|js|jsx)$/,
-          exclude: [/src-sw\.js$/],
-          include: [
-            path.resolve(__dirname, 'src'),
-            path.resolve(__dirname, 'specs'),
-            path.resolve(__dirname, 'shims'),
-            path.resolve(__dirname, 'strings'),
-            path.resolve(__dirname, 'App.tsx'),
-            path.resolve(__dirname, 'App.web.tsx'),
-            path.resolve(__dirname, 'index.web.tsx'),
-            /node_modules\/@gorhom/,
-            /node_modules\/react-native-reanimated/,
-            /node_modules\/react-native-worklets/,
-            /node_modules\/react-native-gesture-handler/,
-            /node_modules\/react-native-shimmer-placeholder/,
-            /node_modules\/react-native-error-boundary/,
-            /node_modules\/@legendapp/,
-            /node_modules\/@expo/,
-            /node_modules\/@cd-z/,
-            /@react-navigation/,
-            /node_modules\/expo/,
-            /node_modules\/expo-sqlite/,
-            /node_modules\/expo-notifications/,
-            /node_modules\/expo-navigation-bar/,
-            /node_modules\/expo-keep-awake/,
-            /node_modules\/expo-linear-gradient/,
-            /node_modules\/expo-modules-core/,
-            /node_modules\/expo-linking/,
-            /node_modules\/expo-clipboard/,
-            /node_modules\/expo-haptics/,
-            /node_modules\/expo-localization/,
-            /node_modules\/expo-speech/,
-            /node_modules\/expo-web-browser/,
-            /node_modules\/expo-file-system/,
-            /node_modules\/expo-document-picker/,
-          ],
+          exclude: filepath => {
+            // Allow transpiling these packages even though they're in node_modules
+            const allowedPackages = [
+              '@gorhom',
+              'react-native-reanimated',
+              'react-native-worklets',
+              'react-native-gesture-handler',
+              'react-native-shimmer-placeholder',
+              'react-native-error-boundary',
+              '@legendapp',
+              '@expo',
+              '@cd-z',
+              '@react-navigation',
+              'expo',
+              'react-native-paper',
+              'react-native-vector-icons',
+            ];
+            if (/node_modules/.test(filepath)) {
+              return !allowedPackages.some(pkg => filepath.includes(pkg));
+            }
+            return /src-sw\.js$/.test(filepath);
+          },
           use: {
             loader: 'babel-loader',
             options: {
