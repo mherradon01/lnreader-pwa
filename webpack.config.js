@@ -62,24 +62,34 @@ module.exports = (env, argv) => {
         // Handle OPTIONS preflight requests
         devServer.app.options('/cors-proxy', (req, res) => {
           res.setHeader('Access-Control-Allow-Origin', '*');
-          res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-          res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Referrer-Policy');
+          res.setHeader(
+            'Access-Control-Allow-Methods',
+            'GET, POST, PUT, DELETE, OPTIONS',
+          );
+          res.setHeader(
+            'Access-Control-Allow-Headers',
+            'Content-Type, Authorization, Referrer-Policy',
+          );
           res.sendStatus(200);
         });
 
         // Handle all HTTP methods for CORS proxy
         devServer.app.all('/cors-proxy', async (req, res) => {
           const { url } = req.query;
-          
+
+          // eslint-disable-next-line no-console
           console.log('[CORS Proxy] Request:', {
             method: req.method,
             url,
             headers: req.headers,
           });
-          
+
           if (!url || typeof url !== 'string') {
+            // eslint-disable-next-line no-console
             console.error('[CORS Proxy] Missing URL parameter');
-            return res.status(400).json({ error: 'Missing or invalid url parameter' });
+            return res
+              .status(400)
+              .json({ error: 'Missing or invalid url parameter' });
           }
 
           try {
@@ -97,42 +107,61 @@ module.exports = (env, argv) => {
             const fetchOptions = {
               method: req.method === 'OPTIONS' ? 'GET' : req.method,
               headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
               },
             };
 
             // Copy relevant headers from original request
             if (req.headers['content-type']) {
-              fetchOptions.headers['Content-Type'] = req.headers['content-type'];
+              fetchOptions.headers['Content-Type'] =
+                req.headers['content-type'];
             }
 
             // Forward body for POST, PUT, PATCH requests
             if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body) {
-              fetchOptions.body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+              fetchOptions.body =
+                typeof req.body === 'string'
+                  ? req.body
+                  : JSON.stringify(req.body);
             }
 
+            // eslint-disable-next-line no-console
             console.log('[CORS Proxy] Fetching:', url, fetchOptions);
             const response = await fetchImpl(url, fetchOptions);
-            console.log('[CORS Proxy] Response:', response.status, response.statusText);
+            // eslint-disable-next-line no-console
+            console.log(
+              '[CORS Proxy] Response:',
+              response.status,
+              response.statusText,
+            );
 
             // Copy headers from the target response
             const contentType = response.headers.get('content-type');
             if (contentType) {
               res.setHeader('Content-Type', contentType);
             }
-            
+
             res.setHeader('Access-Control-Allow-Origin', '*');
-            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Referrer-Policy');
+            res.setHeader(
+              'Access-Control-Allow-Methods',
+              'GET, POST, PUT, DELETE, OPTIONS',
+            );
+            res.setHeader(
+              'Access-Control-Allow-Headers',
+              'Content-Type, Authorization, Referrer-Policy',
+            );
 
             // Get response body
             const buffer = Buffer.from(await response.arrayBuffer());
+            // eslint-disable-next-line no-console
             res.send(buffer);
           } catch (error) {
+            // eslint-disable-next-line no-console
             console.error('[CORS proxy error]:', error);
-            res.status(500).json({ 
+            res.status(500).json({
               error: 'Failed to fetch from target URL',
-              details: error instanceof Error ? error.message : 'Unknown error'
+              details: error instanceof Error ? error.message : 'Unknown error',
             });
           }
         });
@@ -141,28 +170,87 @@ module.exports = (env, argv) => {
       },
     },
     resolve: {
-      extensions: ['.web.tsx', '.web.ts', '.web.jsx', '.web.js', '.tsx', '.ts', '.jsx', '.js', '.mjs'],
+      extensions: [
+        '.web.tsx',
+        '.web.ts',
+        '.web.jsx',
+        '.web.js',
+        '.tsx',
+        '.ts',
+        '.jsx',
+        '.js',
+        '.mjs',
+      ],
       fullySpecified: false,
       mainFields: ['browser', 'module', 'main'],
       alias: {
         'react-native$': path.resolve(__dirname, 'shims/react-native.web.js'),
-        'react-native-reanimated$': path.resolve(__dirname, 'shims/react-native-reanimated.web.js'),
-        '@gorhom/bottom-sheet': path.resolve(__dirname, 'shims/gorhom-bottom-sheet.web.js'),
-        'react-native-tab-view': path.resolve(__dirname, 'shims/react-native-tab-view.web.js'),
-        'react-native-mmkv': path.resolve(__dirname, 'shims/react-native-mmkv.web.ts'),
-        'react-native-lottie-splash-screen': path.resolve(__dirname, 'shims/react-native-lottie-splash-screen.web.ts'),
-        'react-native-background-actions': path.resolve(__dirname, 'shims/react-native-background-actions.web.ts'),
-        '@react-native-google-signin/google-signin': path.resolve(__dirname, 'shims/react-native-google-signin.web.ts'),
-        '@react-native-documents/picker': path.resolve(__dirname, 'shims/react-native-documents-picker.web.ts'),
-        '@react-native-vector-icons/get-image': path.resolve(__dirname, 'shims/react-native-vector-icons-get-image.web.js'),
-        '@react-native-cookies/cookies': path.resolve(__dirname, 'shims/react-native-cookies.web.ts'),
-        'react-native-reanimated/scripts/validate-worklets-version': path.resolve(__dirname, 'shims/reanimated-validate-worklets-version.web.js'),
+        'react-native-reanimated$': path.resolve(
+          __dirname,
+          'shims/react-native-reanimated.web.js',
+        ),
+        '@gorhom/bottom-sheet': path.resolve(
+          __dirname,
+          'shims/gorhom-bottom-sheet.web.js',
+        ),
+        'react-native-tab-view': path.resolve(
+          __dirname,
+          'shims/react-native-tab-view.web.js',
+        ),
+        'react-native-mmkv': path.resolve(
+          __dirname,
+          'shims/react-native-mmkv.web.ts',
+        ),
+        'react-native-lottie-splash-screen': path.resolve(
+          __dirname,
+          'shims/react-native-lottie-splash-screen.web.ts',
+        ),
+        'react-native-background-actions': path.resolve(
+          __dirname,
+          'shims/react-native-background-actions.web.ts',
+        ),
+        '@react-native-google-signin/google-signin': path.resolve(
+          __dirname,
+          'shims/react-native-google-signin.web.ts',
+        ),
+        '@react-native-documents/picker': path.resolve(
+          __dirname,
+          'shims/react-native-documents-picker.web.ts',
+        ),
+        '@react-native-vector-icons/get-image': path.resolve(
+          __dirname,
+          'shims/react-native-vector-icons-get-image.web.js',
+        ),
+        '@react-native-cookies/cookies': path.resolve(
+          __dirname,
+          'shims/react-native-cookies.web.ts',
+        ),
+        'react-native-reanimated/scripts/validate-worklets-version':
+          path.resolve(
+            __dirname,
+            'shims/reanimated-validate-worklets-version.web.js',
+          ),
         'expo-sqlite': path.resolve(__dirname, 'shims/expo-sqlite.web.ts'),
-        'expo-notifications': path.resolve(__dirname, 'shims/expo-notifications.web.ts'),
-        'react-native-webview$': path.resolve(__dirname, 'shims/react-native-webview.web.js'),
-        '@services/backup/drive$': path.resolve(__dirname, 'src/services/backup/drive/index.web.ts'),
-        '@services/backup/local$': path.resolve(__dirname, 'src/services/backup/local/index.web.ts'),
-        './backup/local$': path.resolve(__dirname, 'src/services/backup/local/index.web.ts'),
+        'expo-notifications': path.resolve(
+          __dirname,
+          'shims/expo-notifications.web.ts',
+        ),
+        'react-native-webview$': path.resolve(
+          __dirname,
+          'shims/react-native-webview.web.js',
+        ),
+        '@services/backup/drive$': path.resolve(
+          __dirname,
+          'src/services/backup/drive/index.web.ts',
+        ),
+        '@services/backup/local$': path.resolve(
+          __dirname,
+          'src/services/backup/local/index.web.ts',
+        ),
+        './backup/local$': path.resolve(
+          __dirname,
+          'src/services/backup/local/index.web.ts',
+        ),
         '@components': path.resolve(__dirname, 'src/components'),
         '@database': path.resolve(__dirname, 'src/database'),
         '@hooks': path.resolve(__dirname, 'src/hooks'),
@@ -176,7 +264,8 @@ module.exports = (env, argv) => {
         '@api': path.resolve(__dirname, 'src/api'),
         '@type': path.resolve(__dirname, 'src/type'),
         '@specs': path.resolve(__dirname, 'specs'),
-        'react-native-vector-icons/MaterialCommunityIcons': '@react-native-vector-icons/material-design-icons',
+        'react-native-vector-icons/MaterialCommunityIcons':
+          '@react-native-vector-icons/material-design-icons',
       },
       fallback: {
         'crypto': false,
@@ -207,14 +296,15 @@ module.exports = (env, argv) => {
           include: /@react-navigation/,
           enforce: 'pre',
           use: {
-            loader: path.resolve(__dirname, 'webpack-loaders/exports-polyfill-loader.js'),
+            loader: path.resolve(
+              __dirname,
+              'webpack-loaders/exports-polyfill-loader.js',
+            ),
           },
         },
         {
           test: /\.(ts|tsx|js|jsx)$/,
-          exclude: [
-            /src-sw\.js$/,
-          ],
+          exclude: [/src-sw\.js$/],
           include: [
             path.resolve(__dirname, 'src'),
             path.resolve(__dirname, 'specs'),
@@ -253,41 +343,55 @@ module.exports = (env, argv) => {
             loader: 'babel-loader',
             options: {
               presets: [
-                ['@babel/preset-env', {
-                  modules: false, // Let webpack handle module transformation
-                  targets: {
-                    browsers: ['last 2 versions', 'not dead', '> 0.2%']
-                  }
-                }],
+                [
+                  '@babel/preset-env',
+                  {
+                    modules: false, // Let webpack handle module transformation
+                    targets: {
+                      browsers: ['last 2 versions', 'not dead', '> 0.2%'],
+                    },
+                  },
+                ],
                 ['@babel/preset-react', { runtime: 'automatic' }],
                 '@babel/preset-typescript',
               ],
               plugins: [
-                ['@babel/plugin-transform-runtime', {
-                  regenerator: true,
-                }],
+                [
+                  '@babel/plugin-transform-runtime',
+                  {
+                    regenerator: true,
+                  },
+                ],
                 ['@babel/plugin-transform-class-properties', { loose: true }],
                 ['@babel/plugin-transform-private-methods', { loose: true }],
-                ['@babel/plugin-transform-private-property-in-object', { loose: true }],
-                ['babel-plugin-module-resolver', {
-                  alias: {
-                    '@components': './src/components',
-                    '@database': './src/database',
-                    '@hooks': './src/hooks',
-                    '@screens': './src/screens',
-                    '@strings': './strings',
-                    '@services': './src/services',
-                    '@plugins': './src/plugins',
-                    '@utils': './src/utils',
-                    '@theme': './src/theme',
-                    '@navigators': './src/navigators',
-                    '@api': './src/api',
-                    '@type': './src/type',
-                    '@specs': './specs',
-                    '@react-native-google-signin/google-signin': './shims/react-native-google-signin.web.ts',
-                    'react-native-vector-icons/MaterialCommunityIcons': '@react-native-vector-icons/material-design-icons',
+                [
+                  '@babel/plugin-transform-private-property-in-object',
+                  { loose: true },
+                ],
+                [
+                  'babel-plugin-module-resolver',
+                  {
+                    alias: {
+                      '@components': './src/components',
+                      '@database': './src/database',
+                      '@hooks': './src/hooks',
+                      '@screens': './src/screens',
+                      '@strings': './strings',
+                      '@services': './src/services',
+                      '@plugins': './src/plugins',
+                      '@utils': './src/utils',
+                      '@theme': './src/theme',
+                      '@navigators': './src/navigators',
+                      '@api': './src/api',
+                      '@type': './src/type',
+                      '@specs': './specs',
+                      '@react-native-google-signin/google-signin':
+                        './shims/react-native-google-signin.web.ts',
+                      'react-native-vector-icons/MaterialCommunityIcons':
+                        '@react-native-vector-icons/material-design-icons',
+                    },
                   },
-                }],
+                ],
               ],
             },
           },
@@ -327,38 +431,44 @@ module.exports = (env, argv) => {
       }),
       new webpack.DefinePlugin({
         __DEV__: JSON.stringify(isDev),
-        'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production'),
+        'process.env.NODE_ENV': JSON.stringify(
+          isDev ? 'development' : 'production',
+        ),
         'process.env.EXPO_OS': JSON.stringify('web'),
-        'process.env.GOOGLE_CLIENT_ID': JSON.stringify(process.env.GOOGLE_CLIENT_ID || ''),
+        'process.env.GOOGLE_CLIENT_ID': JSON.stringify(
+          process.env.GOOGLE_CLIENT_ID || '',
+        ),
       }),
       new webpack.ProvidePlugin({
         process: 'process/browser',
       }),
       new webpack.ProvidePlugin({
-        'React.unstable_batchedUpdates': ['react-dom', 'unstable_batchedUpdates'],
+        'React.unstable_batchedUpdates': [
+          'react-dom',
+          'unstable_batchedUpdates',
+        ],
       }),
       // Replace ALL imports that resolve to react-native-reanimated's Easing.js
       new webpack.NormalModuleReplacementPlugin(
         /[\\/]react-native-reanimated[\\/]lib[\\/]module[\\/]Easing\.js$/,
-        path.resolve(__dirname, 'shims/reanimated-easing.web.js')
+        path.resolve(__dirname, 'shims/reanimated-easing.web.js'),
       ),
       new webpack.NormalModuleReplacementPlugin(
         /react-native$/,
-        (resource) => {
+        // eslint-disable-next-line no-unused-vars
+        resource => {
           // Only replace if it's trying to import specific missing exports
-          if (resource.request === 'react-native' && resource.context.includes('node_modules')) {
-            const polyfills = path.resolve(__dirname, 'shims/react-native-polyfills.web.ts');
-            // We still want to use react-native-web for most things
-            // but provide fallbacks for missing exports
-          }
-        }
+          // react-native-web is used as the primary implementation
+        },
       ),
-      ...(!isDev ? [
-        new InjectManifest({
-          swSrc: './src-sw.js',
-          swDest: 'service-worker.js',
-        }),
-      ] : []),
+      ...(!isDev
+        ? [
+            new InjectManifest({
+              swSrc: './src-sw.js',
+              swDest: 'service-worker.js',
+            }),
+          ]
+        : []),
     ],
     ignoreWarnings: [
       /Failed to parse source map/,
