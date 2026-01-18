@@ -1,27 +1,30 @@
 // Polyfill for require() in browser context
 // This is used by some libraries that try to use require() dynamically
-if (typeof require === 'undefined') {
-  // eslint-disable-next-line no-global-assign
-  require = function (moduleId) {
+
+// Define require globally
+if (typeof window !== 'undefined' && typeof window.require === 'undefined') {
+  window.require = function (moduleId) {
     // Return empty object for unknown requires
     // This prevents "require is not defined" errors
+    console.warn('require() called for:', moduleId, '- returning empty object');
     return {};
   };
 
   // Also polyfill require.resolve
-  // eslint-disable-next-line no-global-assign
-  require.resolve = function (moduleId) {
+  window.require.resolve = function (moduleId) {
     return moduleId;
   };
 
   // Also polyfill require.cache
-  // eslint-disable-next-line no-global-assign
-  require.cache = {};
-
-  // Make it available globally
-  if (typeof window !== 'undefined') {
-    window.require = require;
-  }
+  window.require.cache = {};
 }
 
-export default require;
+// Also define it on globalThis for non-browser contexts
+if (typeof globalThis !== 'undefined' && typeof globalThis.require === 'undefined') {
+  globalThis.require = window.require || function (moduleId) {
+    console.warn('require() called for:', moduleId, '- returning empty object');
+    return {};
+  };
+}
+
+export default window.require || (() => {});
