@@ -1,12 +1,14 @@
 import 'react-native-url-polyfill/auto';
-import React from 'react';
+import './shims/require-polyfill.web';
 import { AppRegistry } from 'react-native';
 import { unstable_batchedUpdates } from 'react-dom';
 import { initializeMMKVAsync } from './shims/react-native-mmkv.web';
 import App from './App';
 
 // Suppress harmless warnings that don't apply to web
+// eslint-disable-next-line no-console
 const originalWarn = console.warn;
+// eslint-disable-next-line no-console
 console.warn = (...args) => {
   const message = args[0];
   if (
@@ -19,8 +21,11 @@ console.warn = (...args) => {
 };
 
 // Polyfill unstable_batchedUpdates for libraries that expect it from react-native
-if (typeof (window as any).ReactNativeWebUnstableBatchedUpdates === 'undefined') {
-  (window as any).ReactNativeWebUnstableBatchedUpdates = unstable_batchedUpdates;
+if (
+  typeof (window as any).ReactNativeWebUnstableBatchedUpdates === 'undefined'
+) {
+  (window as any).ReactNativeWebUnstableBatchedUpdates =
+    unstable_batchedUpdates;
 }
 
 // Register the app for web
@@ -39,24 +44,12 @@ if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/service-worker.js')
-      .then((registration) => {
+      .then(registration => {
+        // eslint-disable-next-line no-console
         console.log('SW registered: ', registration);
       })
-      .catch((registrationError) => {
-        console.log('SW registration failed: ', registrationError);
-      });
-  });
-}
-
-// Register service worker for PWA
-if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/service-worker.js')
-      .then((registration) => {
-        console.log('SW registered: ', registration);
-      })
-      .catch((registrationError) => {
+      .catch(registrationError => {
+        // eslint-disable-next-line no-console
         console.log('SW registration failed: ', registrationError);
       });
   });
