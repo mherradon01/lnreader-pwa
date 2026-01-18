@@ -15,14 +15,29 @@ const updateNovelMetadata = async (
   const { name, summary, author, artist, genres, status, totalPages } = novel;
   let cover = novel.cover;
   const novelDir = NOVEL_STORAGE + '/' + pluginId + '/' + novelId;
-  if (NativeFile.exists(novelDir)) {
-    NativeFile.mkdir(novelDir);
+
+  // Create directory if it doesn't exist (await for web compatibility)
+  const dirExists = await Promise.resolve(NativeFile.exists(novelDir));
+  if (!dirExists) {
+    await Promise.resolve(NativeFile.mkdir(novelDir));
   }
+
   if (cover) {
     const novelCoverPath = novelDir + '/cover.png';
     const novelCoverUri = 'file://' + novelCoverPath;
-    downloadFile(cover, novelCoverPath, getPlugin(pluginId)?.imageRequestInit);
-    cover = novelCoverUri + '?' + Date.now();
+    // Await the download for web compatibility
+    try {
+      await downloadFile(
+        cover,
+        novelCoverPath,
+        getPlugin(pluginId)?.imageRequestInit,
+      );
+      cover = novelCoverUri + '?' + Date.now();
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('[updateNovelMetadata] Failed to download cover:', error);
+      // Keep the original remote URL as fallback
+    }
   }
 
   db.runSync(

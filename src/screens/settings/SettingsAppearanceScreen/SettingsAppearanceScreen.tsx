@@ -146,10 +146,7 @@ const AppearanceSettings = ({ navigation }: AppearanceSettingsScreenProps) => {
         handleGoBack={navigation.goBack}
         theme={theme}
       />
-      <ScrollView
-        style={styles.flex1}
-        contentContainerStyle={styles.scrollContent}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         <List.Section>
           <List.SubHeader theme={theme}>
             {getString('appearanceScreen.appTheme')}
@@ -292,9 +289,6 @@ const AppearanceSettings = ({ navigation }: AppearanceSettingsScreenProps) => {
 export default AppearanceSettings;
 
 const styles = StyleSheet.create({
-  flex1: {
-    flex: 1,
-  },
   scrollContent: {
     paddingBottom: 40,
   },
@@ -306,6 +300,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     flexDirection: 'row',
+    gap: 8,
   },
   segmentedControlContainer: {
     paddingHorizontal: 16,

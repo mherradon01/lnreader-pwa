@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     margin: 30,
     padding: 24,
-    shadowColor: 'transparent', // Modal weird shadow fix
+    boxShadow: 'none', // Modal weird shadow fix
   },
 });
 

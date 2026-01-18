@@ -2,6 +2,7 @@ import {
   getChapter as getDbChapter,
   getNextChapter,
   getPrevChapter,
+  deleteChapter as deleteChapterFromDb,
 } from '@database/queries/ChapterQueries';
 import { insertHistory } from '@database/queries/HistoryQueries';
 import { ChapterInfo, NovelInfo } from '@database/types';
@@ -55,8 +56,13 @@ export default function useChapter(
   const [[nextChapter, prevChapter], setAdjacentChapter] = useState<
     ChapterInfo[] | undefined[]
   >([]);
-  const { autoScroll, autoScrollInterval, autoScrollOffset, useVolumeButtons, volumeButtonsOffset } =
-    useChapterGeneralSettings();
+  const {
+    autoScroll,
+    autoScrollInterval,
+    autoScrollOffset,
+    useVolumeButtons,
+    volumeButtonsOffset,
+  } = useChapterGeneralSettings();
   const { incognitoMode } = useLibrarySettings();
   const [error, setError] = useState<string>();
   const { tracker } = useTracker();
@@ -64,7 +70,10 @@ export default function useChapter(
   const { setImmersiveMode, showStatusAndNavBar } = useFullscreenMode();
 
   const connectVolumeButton = useCallback(() => {
-    const offset = defaultTo(volumeButtonsOffset, Math.round(Dimensions.get('window').height * 0.75));
+    const offset = defaultTo(
+      volumeButtonsOffset,
+      Math.round(Dimensions.get('window').height * 0.75),
+    );
     emmiter.addListener('VolumeUp', () => {
       webViewRef.current?.injectJavaScript(`(()=>{
         window.scrollBy({top: -${offset}, behavior: 'smooth'})
@@ -97,15 +106,44 @@ export default function useChapter(
     async (id: number, path: string) => {
       const filePath = `${NOVEL_STORAGE}/${novel.pluginId}/${chapter.novelId}/${id}/index.html`;
       let text = '';
-      if (NativeFile.exists(filePath)) {
-        text = NativeFile.readFile(filePath);
-      } else {
-        await fetchChapter(novel.pluginId, path)
-          .then(res => {
-            text = res;
-          })
-          .catch(e => setError(e.message));
+
+      try {
+        // Fetch fresh chapter data from DB to get current isDownloaded status
+        const freshChapter = await getDbChapter(id);
+        const isDownloaded = freshChapter?.isDownloaded ?? false;
+
+        // console.log('[useChapter.loadChapterText] Chapter download status from DB:', { id, isDownloaded });
+
+        // If chapter is marked as downloaded, try to read from file storage
+        if (isDownloaded) {
+          // console.log('[useChapter.loadChapterText] Chapter is downloaded, reading from file:', filePath);
+
+          // On web, readFile is async, so we need to await it
+          const fileContent = NativeFile.readFile(filePath);
+          if (fileContent instanceof Promise) {
+            text = await fileContent;
+          } else {
+            text = fileContent;
+          }
+
+          // console.log('[useChapter.loadChapterText] Successfully loaded downloaded chapter');
+        } else {
+          // Chapter not downloaded, fetch from plugin
+          // console.log('[useChapter.loadChapterText] Chapter not downloaded, fetching from plugin');
+          text = await fetchChapter(novel.pluginId, path);
+        }
+      } catch (_error) {
+        // comment.warn('[useChapter.loadChapterText] Error loading chapter from cache, fetching from plugin:', _error);
+        // If cached file read fails, try fetching from plugin
+        try {
+          text = await fetchChapter(novel.pluginId, path);
+        } catch (fetchError) {
+          // console.error('[useChapter.loadChapterText] Failed to fetch chapter:', fetchError);
+          setError((fetchError as Error)?.message || 'Failed to load chapter');
+          throw fetchError;
+        }
       }
+
       return text;
     },
     [chapter.novelId, novel.pluginId],
@@ -199,11 +237,18 @@ export default function useChapter(
           // a relative number
           markChapterRead(chapter.id);
           updateTracker();
+          // Silently delete downloaded chapter after reading (no notification)
+          if (chapter.isDownloaded) {
+            deleteChapterFromDb(novel.pluginId, novel.id, chapter.id).catch(
+              () => {}, // Ignore errors silently
+            );
+          }
         }
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
-      chapter.id,
+      chapter,
       incognitoMode,
       markChapterRead,
       updateChapterProgress,

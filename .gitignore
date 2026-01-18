@@ -90,3 +90,4 @@ flake.lock
 .pnpm-store
 
 .cursor/
+.vercel

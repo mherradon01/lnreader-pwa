@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -31,6 +31,53 @@ const insertOrRemoveIntoArray = (array: string[], val: string): string[] =>
   array.indexOf(val) > -1 ? array.filter(ele => ele !== val) : [...array, val];
 
 type SelectedFilters = FilterToValues<Filters>;
+
+interface FilterItemProps {
+  theme: ThemeColors;
+  filter: Filters[string];
+  filterKey: keyof Filters;
+  selectedFilters: SelectedFilters;
+  setSelectedFilters: React.Dispatch<React.SetStateAction<SelectedFilters>>;
+}
+
+interface FilterHandleProps {
+  theme: ThemeColors;
+  filters: SelectedFilters;
+  selectedFilters: SelectedFilters;
+  filterSheetRef: React.RefObject<BottomSheetModal>;
+  clearFilters: (filters: SelectedFilters) => void;
+  setFilters: (filters: SelectedFilters) => void;
+  setSelectedFilters: React.Dispatch<React.SetStateAction<SelectedFilters>>;
+}
+
+const FilterHandle = ({
+  theme,
+  filters,
+  selectedFilters,
+  filterSheetRef,
+  clearFilters,
+  setFilters,
+  setSelectedFilters,
+}: FilterHandleProps) => (
+  <View style={[styles.buttonContainer, { borderBottomColor: theme.outline }]}>
+    <Button
+      title={getString('common.reset')}
+      onPress={() => {
+        setSelectedFilters(filters);
+        clearFilters(filters);
+      }}
+    />
+    <Button
+      title={getString('common.filter')}
+      textColor={theme.onPrimary}
+      onPress={() => {
+        setFilters(selectedFilters);
+        filterSheetRef?.current?.close();
+      }}
+      mode="contained"
+    />
+  </View>
+);
 
 interface FilterItemProps {
   theme: ThemeColors;
@@ -345,6 +392,29 @@ const FilterBottomSheet: React.FC<BottomSheetProps> = ({
   const [selectedFilters, setSelectedFilters] =
     useState<SelectedFilters>(filters);
 
+  const handleComponentRenderer = useCallback(
+    () => (
+      <FilterHandle
+        theme={theme}
+        filters={filters}
+        selectedFilters={selectedFilters}
+        filterSheetRef={filterSheetRef}
+        clearFilters={clearFilters}
+        setFilters={setFilters}
+        setSelectedFilters={setSelectedFilters}
+      />
+    ),
+    [
+      theme,
+      filters,
+      selectedFilters,
+      filterSheetRef,
+      clearFilters,
+      setFilters,
+      setSelectedFilters,
+    ],
+  );
+
   return (
     <BottomSheet
       bottomSheetRef={filterSheetRef}
@@ -352,28 +422,7 @@ const FilterBottomSheet: React.FC<BottomSheetProps> = ({
       bottomInset={bottom}
       backgroundStyle={styles.transparent}
       style={[styles.container, { backgroundColor: overlay(2, theme.surface) }]}
-      handleComponent={() => (
-        <View
-          style={[styles.buttonContainer, { borderBottomColor: theme.outline }]}
-        >
-          <Button
-            title={getString('common.reset')}
-            onPress={() => {
-              setSelectedFilters(filters);
-              clearFilters(filters);
-            }}
-          />
-          <Button
-            title={getString('common.filter')}
-            textColor={theme.onPrimary}
-            onPress={() => {
-              setFilters(selectedFilters);
-              filterSheetRef?.current?.close();
-            }}
-            mode="contained"
-          />
-        </View>
-      )}
+      handleComponent={handleComponentRenderer}
     >
       <BottomSheetFlatList
         data={filters && Object.entries(filters)}

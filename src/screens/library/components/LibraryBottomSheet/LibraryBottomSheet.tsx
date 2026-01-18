@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import React, { RefObject, useCallback, useMemo, useState } from 'react';
 import {
   StyleProp,
@@ -49,6 +50,7 @@ const FirstRoute = () => {
   return (
     <View style={styles.flex}>
       <LegendList
+        style={{ flex: 1 }}
         recycleItems
         estimatedItemSize={4}
         extraData={[filter]}
@@ -82,6 +84,7 @@ const SecondRoute = () => {
   return (
     <View style={styles.flex}>
       <LegendList
+        style={{ flex: 1 }}
         recycleItems
         data={librarySortOrderList}
         extraData={[sortOrder]}
@@ -159,6 +162,7 @@ const ThirdRoute = () => {
         {getString('libraryScreen.bottomSheet.display.displayMode')}
       </Text>
       <LegendList
+        style={{ flex: 1 }}
         recycleItems
         estimatedItemSize={4}
         data={displayModesList}

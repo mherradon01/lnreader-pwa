@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import React, { memo, useCallback, useMemo, useState } from 'react';
 import { getString } from '@strings/translations';
 import { Appbar } from 'react-native-paper';
@@ -69,6 +70,8 @@ const NovelAppbar = ({
   shareNovel,
   showJumpToChapterModal,
   headerOpacity,
+  onRefresh,
+  isRefreshing,
 }: {
   novel: NovelInfo | undefined;
   theme: ThemeColors;
@@ -82,6 +85,8 @@ const NovelAppbar = ({
   shareNovel: () => void;
   showJumpToChapterModal: (arg: boolean) => void;
   headerOpacity: SharedValue<number>;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }) => {
   const headerOpacityStyle = useAnimatedStyle(() => {
     const backgroundColor = interpolateColor(
@@ -172,6 +177,13 @@ const NovelAppbar = ({
               showJumpToChapterModal(true);
             }}
           />
+          {!isLocal && (
+            <AppbarAction
+              icon="refresh"
+              onPress={onRefresh}
+              style={isRefreshing ? { opacity: 0.5 } : undefined}
+            />
+          )}
           {!isLocal && (
             <Menu
               theme={theme}

@@ -1,58 +1,63 @@
 # Contributing Guide
 
-Contributions are welcome and are greatly appreciated!
+This project is maintained on a minimal basis - primarily for major bug fixes encountered during use. This guide provides setup instructions for anyone who wants to fork the project or contribute fixes.
 
-## Setup your environment with nix
+## Table of Contents
 
-If you are on a Linux system, you can install the nix package manager and use the nix flakes to set up your development environment.
-See [CONTRIBUTING-NIX.md](CONTRIBUTING-NIX.md)
+- [Setting Up Your Environment](#setting-up-your-environment)
+- [Development Workflow](#development-workflow)
+- [Code Quality](#code-quality)
 
-## Setting up your environment
+## Setting Up Your Environment
 
-After forking to your own github org or account, do the following steps to get started:
+After forking to your own GitHub account, follow these steps to get started:
 
 ```bash
-# prerequisites
-node --version >= 20   (for version management, get nvm [recommended])
-java sdk --version >= 17    (for version management, get jenv [optional])
-android sdk                 (https://developer.android.com/studio)
+# Prerequisites
+node --version >= 20      (use nvm for version management [recommended])
+pnpm --version = 9.15.0   (install via: npm install -g pnpm@9.15.0)
 
-# clone your fork to your local machine
-git clone https://github.com/<your-account-name>/lnreader.git
+# Clone your fork to your local machine
+git clone https://github.com/<your-account-name>/lnreader-pwa.git
 
-# step into local repo
-cd lnreader
+# Navigate to the project directory
+cd lnreader-pwa
 
-# install pnpm (if not already installed)
-npm install -g pnpm
-
-# install dependencies
+# Install dependencies
 pnpm install
-
-# build the apk (the built apk will be found in ~/lnreader/android/app/build/outputs/apk/release/)
-pnpm run build:release:android
 ```
 
-### Developing on Android
+## Development Workflow
 
-You will need an Android device or emulator connected to your computer as well as an IDE of your choice. (eg: vscode)
+### Running the Development Server
 
 ```bash
-# prerequisites
-adb                         (https://developer.android.com/studio/command-line/adb)
-IDE
-
-# check if android device/emulator is connected
-adb devices
-
-# run metro for development
-pnpm run dev:start
-
-# then to view on your android device (new terminal)
-pnpm run dev:android
+# Start the development server (opens at http://localhost:3000)
+pnpm web:dev
 ```
 
-### Style & Linting
+The app will open in your browser with hot-reload enabled. Changes to source files will automatically refresh the app.
+
+### Building for Production
+
+```bash
+# Build the production bundle
+pnpm web:build
+
+# Test the production build locally (opens at http://localhost:3001)
+pnpm web:serve
+```
+
+### Testing PWA Features
+
+To test PWA installation and offline functionality:
+
+1. Build the production version: `pnpm web:build`
+2. Serve it locally: `pnpm web:serve`
+3. Open in Chrome and use the install button
+4. Test offline mode by stopping the server after installation
+
+## Code Quality
 
 This codebase's linting rules are enforced using [ESLint](http://eslint.org/).
 
@@ -61,4 +66,16 @@ codebase, however you can always check to see if the source code is compliant by
 
 ```bash
 pnpm run lint
+
+# auto-fix issues
+pnpm run lint:fix
+
+# check formatting
+pnpm run format:check
+
+# auto-format code
+pnpm run format
+
+# type checking
+pnpm run type-check
 ```

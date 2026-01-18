@@ -20,6 +20,7 @@ import { downloadFile } from '@plugins/helpers/fetch';
 import { getPlugin } from '@plugins/pluginManager';
 import { db } from '@database/db';
 import NativeFile from '@specs/NativeFile';
+import { cleanupNovelMMKVEntries } from './MaintenanceQueries';
 
 export const insertNovelAndChapters = async (
   pluginId: string,
@@ -42,22 +43,27 @@ export const insertNovelAndChapters = async (
 
   if (novelId) {
     if (sourceNovel.cover) {
-      const novelDir = NOVEL_STORAGE + '/' + pluginId + '/' + novelId;
-      NativeFile.mkdir(novelDir);
-      const novelCoverPath = novelDir + '/cover.png';
-      const novelCoverUri = 'file://' + novelCoverPath;
-      await downloadFile(
-        sourceNovel.cover,
-        novelCoverPath,
-        getPlugin(pluginId)?.imageRequestInit,
-      ).then(() => {
-        runSync([
-          [
-            'UPDATE Novel SET cover = ? WHERE id = ?',
-            [novelCoverUri, novelId!],
-          ],
-        ]);
-      });
+      try {
+        const novelDir = NOVEL_STORAGE + '/' + pluginId + '/' + novelId;
+        NativeFile.mkdir(novelDir);
+        const novelCoverPath = novelDir + '/cover.png';
+        const novelCoverUri = 'file://' + novelCoverPath;
+        await downloadFile(
+          sourceNovel.cover,
+          novelCoverPath,
+          getPlugin(pluginId)?.imageRequestInit,
+        ).then(() => {
+          runSync([
+            [
+              'UPDATE Novel SET cover = ? WHERE id = ?',
+              [novelCoverUri, novelId!],
+            ],
+          ]);
+        });
+      } catch (err) {
+        // console.warn('[NovelQueries] Failed to download cover image:', err);
+        // Continue without cover - don't fail the entire novel insertion
+      }
     }
     await insertChapters(novelId, sourceNovel.chapters);
   }
@@ -144,10 +150,19 @@ export const switchNovelToLibraryQuery = async (
 
 // allow to delete local novels
 export const removeNovelsFromLibrary = (novelIds: Array<number>) => {
+  // Get novel info before updating for MMKV cleanup
+  const novelsToRemove = db.getAllSync<NovelInfo>(
+    `SELECT * FROM Novel WHERE id IN (${novelIds.join(', ')})`,
+  );
+
   runSync([
     [`UPDATE Novel SET inLibrary = 0 WHERE id IN (${novelIds.join(', ')});`],
     [`DELETE FROM NovelCategory WHERE novelId IN (${novelIds.join(', ')});`],
   ]);
+
+  // Clean up MMKV entries for removed novels
+  novelsToRemove.forEach(novel => cleanupNovelMMKVEntries(novel));
+
   showToast(getString('browseScreen.removeFromLibrary'));
 };
 
@@ -315,6 +330,7 @@ const restoreObjectQuery = (table: string, obj: any) => {
 export const _restoreNovelAndChapters = async (backupNovel: BackupNovel) => {
   const { chapters, ...novel } = backupNovel;
   await runAsync([
+    ['DELETE FROM Chapter WHERE novelId = ?', [novel.id]],
     ['DELETE FROM Novel WHERE id = ?', [novel.id]],
     [
       restoreObjectQuery('Novel', novel),

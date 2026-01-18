@@ -47,24 +47,28 @@ const SettingsBrowseScreen = ({
 
   const upsertRepository = useCallback(
     (repositoryUrl: string, repository?: Repository) => {
+      const trimmedUrl = repositoryUrl?.trim() || '';
+
       if (
-        !new RegExp(/https?:\/\/(.*)plugins\.min\.json/).test(repositoryUrl)
+        !trimmedUrl ||
+        !new RegExp(/https?:\/\/(.*)plugins\.min\.json/).test(trimmedUrl)
       ) {
         showToast('Repository URL is invalid');
         return;
       }
 
-      if (isRepoUrlDuplicated(repositoryUrl)) {
+      if (isRepoUrlDuplicated(trimmedUrl)) {
         showToast('A respository with this url already exists!');
-      } else {
-        if (repository) {
-          updateRepository(repository.id, repositoryUrl);
-        } else {
-          createRepository(repositoryUrl);
-        }
-        getRepositories();
-        refreshPlugins();
+        return;
       }
+
+      if (repository) {
+        updateRepository(repository.id, trimmedUrl);
+      } else {
+        createRepository(trimmedUrl);
+      }
+      getRepositories();
+      refreshPlugins();
     },
     [refreshPlugins],
   );

@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View, Text, Pressable, Image } from 'react-native';
 
 import { coverPlaceholderColor } from '../theme/colors';
+import { getWebSafeCoverUri } from '@utils/coverUtils';
 
 import color from 'color';
 import { ThemeColors } from '@theme/types';
@@ -44,7 +45,7 @@ const ListView = ({
     >
       <Image
         source={{
-          uri: item.cover,
+          uri: getWebSafeCoverUri(item.cover),
         }}
         style={[styles.extensionIcon, fadedImage]}
       />

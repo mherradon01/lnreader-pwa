@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Portal, TextInput } from 'react-native-paper';
 
@@ -25,6 +25,13 @@ const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
   const theme = useTheme();
   const [repositoryUrl, setRepositoryUrl] = useState(repository?.url || '');
 
+  // Reset state when modal opens or repository changes
+  useEffect(() => {
+    if (visible) {
+      setRepositoryUrl(repository?.url || '');
+    }
+  }, [visible, repository]);
+
   return (
     <Portal>
       <Modal visible={visible} onDismiss={closeModal}>
@@ -33,7 +40,7 @@ const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
         </Text>
         <TextInput
           autoFocus
-          defaultValue={repositoryUrl}
+          value={repositoryUrl}
           placeholder={'Repo URL'}
           onChangeText={setRepositoryUrl}
           mode="outlined"

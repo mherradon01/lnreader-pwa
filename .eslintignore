@@ -1,0 +1,5 @@
+shims/
+node_modules/
+web-build/
+android/
+ios/

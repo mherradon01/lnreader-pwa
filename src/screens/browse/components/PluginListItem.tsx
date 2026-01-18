@@ -1,6 +1,7 @@
 import React, { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, Image, View, Text, StyleSheet } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { Menu } from 'react-native-paper';
 
 import { usePlugins } from '@hooks/persisted';
 import { PluginItem } from '@plugins/types';
@@ -35,10 +36,11 @@ export const PluginListItem = memo(
 
     const isPluginPinned = isPinned(item.id);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [menuVisible, setMenuVisible] = useState(false);
 
     const rightActionStyle = useMemo(
       () => [styles.buttonGroup, { backgroundColor: theme.primary }],
-      [theme.error],
+      [theme.primary],
     );
     const containerStyle = useMemo(
       () => [styles.container, { backgroundColor: theme.surface }],
@@ -153,6 +155,7 @@ export const PluginListItem = memo(
       [
         rightActionStyle,
         theme,
+        handleWebviewPress,
         handlePinPress,
         handleDeletePress,
         isPluginPinned,
@@ -206,6 +209,58 @@ export const PluginListItem = memo(
               textColor={theme.primary}
               onPress={handleLatestPress}
             />
+            <Menu
+              visible={menuVisible}
+              onDismiss={() => setMenuVisible(false)}
+              anchor={
+                <IconButtonV2
+                  name="dots-vertical"
+                  size={22}
+                  color={theme.primary}
+                  onPress={() => setMenuVisible(true)}
+                  theme={theme}
+                />
+              }
+            >
+              {item.hasUpdate || __DEV__ ? (
+                <Menu.Item
+                  onPress={() => {
+                    setMenuVisible(false);
+                    handleUpdatePress();
+                  }}
+                  title={getString('browseScreen.update')}
+                  leadingIcon="download-outline"
+                />
+              ) : null}
+              <Menu.Item
+                onPress={() => {
+                  setMenuVisible(false);
+                  handlePinPress({ close: () => {} });
+                }}
+                title={
+                  isPluginPinned
+                    ? getString('browseScreen.unpin')
+                    : getString('browseScreen.pin')
+                }
+                leadingIcon={isPluginPinned ? 'pin-off' : 'pin'}
+              />
+              <Menu.Item
+                onPress={() => {
+                  setMenuVisible(false);
+                  handleWebviewPress({ close: () => {} });
+                }}
+                title={getString('browseScreen.visitWebsite')}
+                leadingIcon="earth"
+              />
+              <Menu.Item
+                onPress={() => {
+                  setMenuVisible(false);
+                  handleDeletePress({ close: () => {} });
+                }}
+                title={getString('common.delete')}
+                leadingIcon="delete"
+              />
+            </Menu>
           </Pressable>
         </Swipeable>
         <ConfirmationDialog

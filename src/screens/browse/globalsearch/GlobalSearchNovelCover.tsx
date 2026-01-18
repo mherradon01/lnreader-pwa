@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, View, Text, Image, Pressable } from 'react-native';
+import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { ProxiedImage as Image } from '@components';
 import { coverPlaceholderColor } from '@theme/colors';
 import { ThemeColors } from '@theme/types';
 import { NovelItem } from '@plugins/types';

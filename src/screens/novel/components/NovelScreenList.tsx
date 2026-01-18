@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import * as React from 'react';
 import ChapterItem from './ChapterItem';
 import NovelInfoHeader from './Info/NovelInfoHeader';
@@ -314,6 +315,7 @@ const NovelScreenList = ({
   return (
     <>
       <LegendList
+        style={{ flex: 1 }}
         ref={listRef}
         estimatedItemSize={64}
         data={chapters}

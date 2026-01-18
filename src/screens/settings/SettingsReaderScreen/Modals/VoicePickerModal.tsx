@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import React, { useState } from 'react';
 
 import { Portal, TextInput, ActivityIndicator } from 'react-native-paper';
@@ -33,6 +34,7 @@ const VoicePickerModal: React.FC<VoicePickerModalProps> = ({
         contentContainerStyle={[styles.containerStyle]}
       >
         <LegendList
+          style={{ flex: 1 }}
           recycleItems
           ListHeaderComponent={
             <TextInput

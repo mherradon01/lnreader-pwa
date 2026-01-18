@@ -22,13 +22,13 @@ export const insertChapters = async (
     return;
   }
 
-  await db.withExclusiveTransactionAsync(async tx => {
+  await db.withTransactionAsync(async () => {
     for (let index = 0; index < chapters.length; index++) {
       const chapter = chapters[index];
       const chapterName = chapter.name ?? 'Chapter ' + (index + 1);
       const chapterPage = chapter.page || '1';
 
-      const result = await tx.runAsync(
+      const result = await db.runAsync(
         `
           INSERT INTO Chapter (path, name, releaseTime, novelId, chapterNumber, page, position)
           SELECT ?, ?, ?, ?, ?, ?, ?
@@ -48,7 +48,7 @@ export const insertChapters = async (
       const insertId = result.lastInsertRowId;
 
       if (!insertId || insertId < 0) {
-        await tx.runAsync(
+        await db.runAsync(
           `
             UPDATE Chapter SET
               page = ?, position = ?, name = ?, releaseTime = ?, chapterNumber = ?

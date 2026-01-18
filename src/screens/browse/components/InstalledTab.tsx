@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import React, { useCallback, useMemo, useState, memo } from 'react';
 import { Text, StyleSheet } from 'react-native';
 import { Portal } from 'react-native-paper';
@@ -81,7 +82,11 @@ export const InstalledTab = memo(
             plg.id.includes(lowerCaseSearchText),
         );
       }
-      return unpinnedPluginsList;
+      // When not searching, show unpinned plugins in main list
+      // If there are no unpinned plugins, show pinned ones here instead
+      return unpinnedPluginsList.length > 0
+        ? unpinnedPluginsList
+        : pinnedPluginsList;
     }, [searchText, pinnedPluginsList, unpinnedPluginsList]);
 
     const renderItem = useCallback(
@@ -102,6 +107,7 @@ export const InstalledTab = memo(
 
     return (
       <LegendList
+        style={{ flex: 1 }}
         estimatedItemSize={64}
         data={searchedPlugins}
         recycleItems

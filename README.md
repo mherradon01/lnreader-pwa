@@ -7,7 +7,7 @@
 <h1 align="center">LNReader</h1>
 
 <p align="center">
-  LNReader is a free and open source light novel reader for Android, inspired by Tachiyomi.
+  LNReader is a free and open source light novel reader for the web (Progressive Web App).
 </p>
 
 <div align="center">
@@ -29,24 +29,66 @@
   </a>
 </div>
 
-<h2 align="center">Download</h2>
+## 📖 Table of Contents
 
-<p align="center">
-  <a href="https://github.com/LNReader/lnreader/releases/latest">
-    <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/LNReader/lnreader?label=Stable&labelColor=0d7377&color=084c4e&style=flat">
-  </a>
-  <a href="https://github.com/LNReader/lnreader/releases/latest">
-    <img alt="GitHub release (latest SemVer)" src="https://img.shields.io/github/v/release/LNReader/lnreader?include_prereleases&sort=semver&label=Beta&labelColor=3d3d5c&color=2a2a47&style=flat">
-  </a>
-</p>
+- [About](#about)
+- [Installation](#installation)
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Plugins](#plugins)
+- [Translation](#translation)
+- [Contributing](#contributing)
+- [Documentation](#documentation)
 
-<p align="center">
-  Get the app from our <a href="https://github.com/LNReader/lnreader/releases">releases page</a>.
-</p>
+<h2 align="center">About</h2>
 
-<p align="center">
-  <em>Android 7.0 or higher.</em>
-</p>
+LNReader is a Progressive Web App (PWA) that allows you to read light novels from various sources. It works on any device with a modern web browser and can be installed like a native app.
+
+<h2 align="center">Installation</h2>
+
+Access LNReader through any modern web browser and install it as a Progressive Web App:
+
+### How to Install
+
+**On Desktop (Chrome/Edge):**
+1. Visit the app URL in your browser
+2. Look for the install icon (⊕) in the address bar
+3. Click it and follow the prompts
+
+**On Mobile (Android):**
+1. Open the app URL in Chrome
+2. Tap the menu (⋮) button
+3. Select "Add to Home screen"
+
+**On Mobile (iOS/Safari):**
+1. Open the app URL in Safari
+2. Tap the Share button
+3. Scroll and tap "Add to Home Screen"
+
+### Features
+- ✅ Works on desktop and mobile browsers
+- ✅ Installable on any device (works like a native app)
+- ✅ Offline reading support with service workers
+- ✅ Cross-platform (Windows, macOS, Linux, iOS, Android)
+- ✅ Auto-updates when new versions are deployed
+- ✅ No app store required
+
+**Running locally:**
+```bash
+# Install dependencies (requires Node.js 20+ and pnpm 9.15.0)
+pnpm install
+
+# Development mode (http://localhost:3000)
+pnpm web:dev
+
+# Build for production
+pnpm web:build
+
+# Serve production build (http://localhost:3001)
+pnpm web:serve
+```
+
+See [QUICKSTART.md](./QUICKSTART.md) for detailed setup guide and [MIGRATION.md](./MIGRATION.md) for technical migration details.
 
 <h2 align="center">Screenshots</h2>
 
@@ -63,6 +105,32 @@ Plugin requests should be created at [lnreader-plugins](https://github.com/LNRea
 ## Translation
 
 Help translate LNReader into your language on [Crowdin](https://crowdin.com/project/lnreader).
+
+## Contributing
+
+Contributions are welcome! Please read our [Contributing Guide](./CONTRIBUTING.md) before submitting pull requests.
+
+### Development Setup
+
+See [QUICKSTART.md](./QUICKSTART.md) for development setup instructions.
+
+## Documentation
+
+- **[QUICKSTART.md](./QUICKSTART.md)** - Quick start guide for users and developers
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Contribution guidelines and development setup
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Deployment guide for production
+- **[GOOGLE_SIGNIN_WEB.md](./GOOGLE_SIGNIN_WEB.md)** - Google Sign-In setup guide
+- **[CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)** - Community guidelines
+
+## License
+
+LNReader is licensed under the [GPL-3.0 License](./LICENSE).
+
+## Support
+
+- **Discord:** [Join our community](https://discord.gg/QdcWN4MD63)
+- **Issues:** [GitHub Issues](https://github.com/LNReader/lnreader/issues)
+- **Plugins:** [lnreader-plugins](https://github.com/LNReader/lnreader-plugins)
 
 ## Building & Contributing
 

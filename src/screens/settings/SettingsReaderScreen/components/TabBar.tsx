@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import React from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import MaterialCommunityIcons from '@react-native-vector-icons/material-design-icons';

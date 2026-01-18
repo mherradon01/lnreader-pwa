@@ -134,28 +134,53 @@ export default class ServiceManager {
   setMeta(
     transformer: (meta: BackgroundTaskMetadata) => BackgroundTaskMetadata,
   ) {
-    const taskList = [...this.getTaskList()];
-    if (taskList.length === 0 || !taskList[0]?.meta) {
-      return;
-    }
+    try {
+      const taskList = [...this.getTaskList()];
+      if (taskList.length === 0 || !taskList[0]?.meta) {
+        return;
+      }
 
-    taskList[0] = {
-      ...taskList[0],
-      meta: transformer(taskList[0].meta),
-    };
+      const oldMeta = taskList[0].meta;
+      taskList[0] = {
+        ...taskList[0],
+        meta: transformer(taskList[0].meta),
+      };
 
-    if (
-      taskList[0].meta?.isRunning &&
-      taskList[0].task?.name !== 'DOWNLOAD_CHAPTER'
-    ) {
-      const now = Date.now();
-      if (now - this.lastNotifUpdate > 1000) {
-        const delay = 1000 - now - this.lastNotifUpdate;
-        const id = ++this.currentPendingUpdate;
-        setTimeout(() => {
-          if (this.currentPendingUpdate !== id) {
-            return;
-          }
+      // Limit progressText length to avoid memory bloat
+      if (
+        taskList[0].meta?.progressText &&
+        taskList[0].meta.progressText.length > 200
+      ) {
+        taskList[0].meta.progressText = taskList[0].meta.progressText.substring(
+          0,
+          200,
+        );
+      }
+
+      if (
+        taskList[0].meta?.isRunning &&
+        taskList[0].task?.name !== 'DOWNLOAD_CHAPTER'
+      ) {
+        const now = Date.now();
+        if (now - this.lastNotifUpdate > 1000) {
+          const delay = 1000 - now - this.lastNotifUpdate;
+          const id = ++this.currentPendingUpdate;
+          setTimeout(() => {
+            if (this.currentPendingUpdate !== id) {
+              return;
+            }
+            BackgroundService.updateNotification({
+              taskTitle: taskList[0].meta?.name || 'Unknown Task',
+              taskDesc: taskList[0].meta?.progressText ?? '',
+              progressBar: {
+                indeterminate: taskList[0].meta?.progress === undefined,
+                value: (taskList[0].meta?.progress || 0) * 100,
+                max: 100,
+              },
+            });
+          }, delay);
+        } else {
+          this.lastNotifUpdate = now;
           BackgroundService.updateNotification({
             taskTitle: taskList[0].meta?.name || 'Unknown Task',
             taskDesc: taskList[0].meta?.progressText ?? '',
@@ -165,22 +190,30 @@ export default class ServiceManager {
               max: 100,
             },
           });
-        }, delay);
-      } else {
-        this.lastNotifUpdate = now;
-        BackgroundService.updateNotification({
-          taskTitle: taskList[0].meta?.name || 'Unknown Task',
-          taskDesc: taskList[0].meta?.progressText ?? '',
-          progressBar: {
-            indeterminate: taskList[0].meta?.progress === undefined,
-            value: (taskList[0].meta?.progress || 0) * 100,
-            max: 100,
-          },
-        });
+        }
       }
-    }
 
-    setMMKVObject(this.STORE_KEY, taskList);
+      // Only persist to MMKV if running status changed (most critical field)
+      // Don't persist on every progress update to reduce memory bloat during large imports
+      // Only persist when task actually starts or stops running
+      const statusChanged = oldMeta?.isRunning !== taskList[0].meta?.isRunning;
+
+      if (statusChanged) {
+        // Only persist the absolute minimum: just mark running status
+        // Don't persist the entire task with all its accumulated progress data
+        const minimalTask = {
+          ...taskList[0],
+          meta: {
+            ...taskList[0].meta,
+            progressText: undefined, // Don't persist progress text
+            progress: undefined, // Don't persist progress
+          },
+        };
+        setMMKVObject(this.STORE_KEY, [minimalTask, ...taskList.slice(1)]);
+      }
+    } catch (error) {
+      // console.error('[ServiceManager] Error in setMeta:', error);
+    }
   }
 
   //gets the progress bar for download chapters notification
@@ -373,69 +406,90 @@ export default class ServiceManager {
   }
 
   getTaskList() {
-    const tasks = getMMKVObject<Array<any>>(this.STORE_KEY) || [];
+    try {
+      const tasks = getMMKVObject<Array<any>>(this.STORE_KEY);
 
-    const convertedTasks = tasks
-      .map(task => {
-        if (task?.task && task?.meta && task?.id) {
-          return task as QueuedBackgroundTask;
-        }
+      // Handle various edge cases
+      if (!tasks) {
+        return [];
+      }
 
-        if (task?.name && !task?.task) {
-          const backgroundTask = task as BackgroundTask;
-          return {
-            task: backgroundTask,
-            meta: {
-              name: this.getTaskName(backgroundTask),
-              isRunning: false,
-              progress: undefined,
-              progressText:
-                backgroundTask.name === 'DOWNLOAD_CHAPTER'
-                  ? (backgroundTask as DownloadChapterTask).data?.chapterName
-                  : undefined,
-            },
-            id: makeId(),
-          } as QueuedBackgroundTask;
-        }
+      // Ensure tasks is actually an array
+      if (!Array.isArray(tasks)) {
+        // console.warn('[ServiceManager] Expected tasks to be an array, got:', typeof tasks);
+        return [];
+      }
 
-        return null;
-      })
-      .filter((task): task is QueuedBackgroundTask => task !== null);
+      const convertedTasks = tasks
+        .map(task => {
+          if (task?.task && task?.meta && task?.id) {
+            return task as QueuedBackgroundTask;
+          }
 
-    const hasOldFormat = tasks.some(task => task?.name && !task?.task);
+          if (task?.name && !task?.task) {
+            const backgroundTask = task as BackgroundTask;
+            return {
+              task: backgroundTask,
+              meta: {
+                name: this.getTaskName(backgroundTask),
+                isRunning: false,
+                progress: undefined,
+                progressText:
+                  backgroundTask.name === 'DOWNLOAD_CHAPTER'
+                    ? (backgroundTask as DownloadChapterTask).data?.chapterName
+                    : undefined,
+              },
+              id: makeId(),
+            } as QueuedBackgroundTask;
+          }
 
-    if (hasOldFormat) {
-      setMMKVObject(this.STORE_KEY, convertedTasks);
+          return null;
+        })
+        .filter((task): task is QueuedBackgroundTask => task !== null);
+
+      const hasOldFormat = tasks.some(task => task?.name && !task?.task);
+
+      if (hasOldFormat) {
+        setMMKVObject(this.STORE_KEY, convertedTasks);
+      }
+
+      return convertedTasks;
+    } catch (error) {
+      // console.error('[ServiceManager] Error in getTaskList:', error);
+      return [];
     }
-
-    return convertedTasks;
   }
 
   addTask(tasks: BackgroundTask | BackgroundTask[]) {
-    const currentTasks = this.getTaskList();
+    try {
+      const currentTasks = this.getTaskList();
 
-    const addableTasks = (Array.isArray(tasks) ? tasks : [tasks]).filter(
-      task =>
-        this.isMultiplicableTask(task) ||
-        !currentTasks.some(_t => _t.task?.name === task.name),
-    );
-    if (addableTasks.length) {
-      const newTasks: QueuedBackgroundTask[] = addableTasks.map(task => ({
-        task,
-        meta: {
-          name: this.getTaskName(task),
-          isRunning: false,
-          progress: undefined,
-          progressText:
-            task.name === 'DOWNLOAD_CHAPTER'
-              ? task.data?.chapterName
-              : undefined,
-        },
-        id: makeId(),
-      }));
+      const addableTasks = (Array.isArray(tasks) ? tasks : [tasks]).filter(
+        task =>
+          this.isMultiplicableTask(task) ||
+          !currentTasks.some(_t => _t.task?.name === task.name),
+      );
+      if (addableTasks.length) {
+        const newTasks: QueuedBackgroundTask[] = addableTasks.map(task => ({
+          task,
+          meta: {
+            name: this.getTaskName(task),
+            isRunning: false,
+            progress: undefined,
+            progressText:
+              task.name === 'DOWNLOAD_CHAPTER'
+                ? task.data?.chapterName
+                : undefined,
+          },
+          id: makeId(),
+        }));
 
-      setMMKVObject(this.STORE_KEY, currentTasks.concat(newTasks));
-      this.start();
+        setMMKVObject(this.STORE_KEY, currentTasks.concat(newTasks));
+        this.start();
+      }
+    } catch (error) {
+      // console.error('[ServiceManager] Error in addTask:', error);
+      throw error;
     }
   }
 

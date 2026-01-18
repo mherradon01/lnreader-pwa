@@ -7,7 +7,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Portal, Appbar, Snackbar } from 'react-native-paper';
-import { useDownload, useTheme } from '@hooks/persisted';
+import { useDownload, useTheme, useAppSettings } from '@hooks/persisted';
 import JumpToChapterModal from './components/JumpToChapterModal';
 import { Actionbar } from '../../components/Actionbar/Actionbar';
 import EditInfoModal from './components/EditInfoModal';
@@ -32,6 +32,8 @@ import { ThemeColors } from '@theme/types';
 import { SafeAreaView } from '@components';
 import { useNovelContext } from './NovelContext';
 import { LegendListRef } from '@legendapp/list';
+import { updateNovel } from '@services/updates/LibraryUpdateQueries';
+import { showToast } from '@utils/showToast';
 
 const Novel = ({ route, navigation }: NovelScreenProps) => {
   const {
@@ -55,6 +57,7 @@ const Novel = ({ route, navigation }: NovelScreenProps) => {
 
   const [selected, setSelected] = useState<ChapterInfo[]>([]);
   const [editInfoModal, showEditInfoModal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const chapterListRef = useRef<LegendListRef | null>(null);
 
@@ -108,6 +111,29 @@ const Novel = ({ route, navigation }: NovelScreenProps) => {
   const deleteChs = useCallback(() => {
     deleteChapters(chapters.filter(c => c.isDownloaded));
   }, [chapters, deleteChapters]);
+
+  const { downloadNewChapters, refreshNovelMetadata } = useAppSettings();
+
+  const handleRefreshNovel = useCallback(() => {
+    if (!novel || novel.isLocal) {
+      return;
+    }
+    setIsRefreshing(true);
+    updateNovel(novel.pluginId, novel.path, novel.id, {
+      downloadNewChapters,
+      refreshNovelMetadata,
+    })
+      .then(() => {
+        showToast(getString('novelScreen.updatedToast', { name: novel.name }));
+      })
+      .catch((error: Error) => {
+        showToast('Failed updating: ' + error.message);
+      })
+      .finally(() => {
+        setIsRefreshing(false);
+      });
+  }, [novel, downloadNewChapters, refreshNovelMetadata]);
+
   const shareNovel = () => {
     if (!novel) {
       return;
@@ -249,6 +275,8 @@ const Novel = ({ route, navigation }: NovelScreenProps) => {
               isLocal={novel?.isLocal ?? route.params?.isLocal}
               goBack={navigation.goBack}
               headerOpacity={headerOpacity}
+              onRefresh={handleRefreshNovel}
+              isRefreshing={isRefreshing}
             />
           ) : (
             <Animated.View

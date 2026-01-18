@@ -1,12 +1,12 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   useWindowDimensions,
   Pressable,
-  Image,
 } from 'react-native';
+import ProxiedImage from './ProxiedImage';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import ListView from './ListView';
@@ -22,6 +22,7 @@ import { getUserAgent } from '@hooks/persisted/useUserAgent';
 import { getString } from '@strings/translations';
 import SourceScreenSkeletonLoading from '@screens/browse/loadingAnimation/SourceScreenSkeletonLoading';
 import { defaultCover } from '@plugins/helpers/constants';
+import { getWebSafeCoverUri } from '@utils/coverUtils';
 import { ActivityIndicator } from 'react-native-paper';
 
 interface UnreadBadgeProps {
@@ -120,7 +121,12 @@ function NovelCover<
 
   const selectNovel = () => onLongPress(item);
 
-  const uri = item.cover || defaultCover;
+  const [uri, setUri] = useState<string>(defaultCover);
+
+  useEffect(() => {
+    getWebSafeCoverUri(item.cover).then(setUri);
+  }, [item.cover]);
+
   const requestInit = imageRequestInit || ({} as ImageRequestInit);
   if (!requestInit.headers) {
     requestInit.headers = {
@@ -192,7 +198,7 @@ function NovelCover<
           ) : null}
           {inActivity ? <InActivityBadge theme={theme} /> : null}
         </View>
-        <Image
+        <ProxiedImage
           source={{ uri, ...requestInit }}
           style={[
             {
@@ -395,9 +401,7 @@ const styles = StyleSheet.create({
   },
   compactTitle: {
     color: 'rgba(255,255,255,1)',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10,
+    textShadow: '-1px 1px 10px rgba(0, 0, 0, 0.75)',
   },
   compactTitleContainer: {
     bottom: 4,

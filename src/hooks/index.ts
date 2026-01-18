@@ -5,6 +5,7 @@ export { useDatabaseInitialization } from './common/useDatabaseInitialization';
 export { usePreviousRouteName } from './common/usePreviousRouteName';
 export { useBackHandler } from './common/useBackHandler';
 export { useDeviceOrientation } from './common/useDeviceOrientation';
+export { useBlurOnUnfocus } from './common/useBlurOnUnfocus';
 
 // hook types
 export type { UseBooleanReturnType } from './common/useBoolean';

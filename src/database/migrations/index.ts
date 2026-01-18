@@ -1,4 +1,5 @@
 import { Migration } from '../types/migration';
+import { migration001 } from './001_initial_schema';
 import { migration002 } from './002_add_novel_counters';
 
 /**
@@ -10,4 +11,4 @@ import { migration002 } from './002_add_novel_counters';
  * 3. Import and add it to the migrations array below
  * 4. Ensure version numbers are sequential
  */
-export const migrations: Migration[] = [migration002];
+export const migrations: Migration[] = [migration001, migration002];

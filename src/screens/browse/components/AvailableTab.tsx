@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import React, { useCallback, useMemo, useState, memo } from 'react';
 import { View, Text, StyleSheet, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -159,6 +160,7 @@ export const AvailableTab = memo(({ searchText, theme }: AvailableTabProps) => {
 
   return (
     <LegendList
+      style={{ flex: 1 }}
       estimatedItemSize={64}
       data={searchedPlugins}
       recycleItems

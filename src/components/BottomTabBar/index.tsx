@@ -1,10 +1,11 @@
 /* eslint-disable react-native/no-inline-styles */
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Pressable, View, StyleSheet } from 'react-native';
+import { Pressable, View, StyleSheet, Platform } from 'react-native';
 import { Text } from 'react-native-paper';
 import { ThemeColors } from '@theme/types';
 import Animated from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface CustomBottomTabBarProps extends BottomTabBarProps {
   theme: ThemeColors;
@@ -27,6 +28,14 @@ function CustomBottomTabBar({
   showLabelsInNav,
   renderIcon,
 }: CustomBottomTabBarProps) {
+  // Use the hook to get insets for native platforms
+  const safeInsets = useSafeAreaInsets();
+  // On native, use the insets; on web, CSS handles safe area via data attribute
+  const bottomInset =
+    Platform.OS === 'web' ? 0 : safeInsets.bottom || insets?.bottom || 0;
+
+  const containerRef = useRef<View>(null);
+
   const getLabelText = useCallback(
     (route: any) => {
       if (!showLabelsInNav && route.name !== state.routeNames[state.index]) {
@@ -46,13 +55,23 @@ function CustomBottomTabBar({
     [descriptors, showLabelsInNav, state.index, state.routeNames],
   );
 
+  // Web-specific props for safe area handling
+  const webProps =
+    Platform.OS === 'web'
+      ? {
+          'data-bottom-tab-bar': 'true',
+        }
+      : {};
+
   return (
     <View
+      ref={containerRef}
+      {...webProps}
       style={[
         styles.container,
         {
           backgroundColor: theme.surface2 || theme.surface,
-          paddingBottom: insets?.bottom || 0,
+          paddingBottom: bottomInset,
         },
       ]}
     >

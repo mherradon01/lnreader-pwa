@@ -3,6 +3,7 @@ import {
   AppState,
   NativeEventEmitter,
   NativeModules,
+  Platform,
   StatusBar,
 } from 'react-native';
 import WebView from 'react-native-webview';
@@ -24,7 +25,9 @@ import {
 import { getBatteryLevelSync } from 'react-native-device-info';
 import * as Speech from 'expo-speech';
 import { PLUGIN_STORAGE } from '@utils/Storages';
+import { processHtmlForWeb } from '@utils/processHtmlForWeb';
 import { useChapterContext } from '../ChapterContext';
+import NativeFile from '@specs/NativeFile';
 import {
   showTTSNotification,
   updateTTSNotification,
@@ -57,9 +60,23 @@ const onLogMessage = (payload: { nativeEvent: { data: string } }) => {
 const { RNDeviceInfo } = NativeModules;
 const deviceInfoEmitter = new NativeEventEmitter(RNDeviceInfo);
 
-const assetsUriPrefix = __DEV__
-  ? 'http://localhost:8081/assets'
-  : 'file:///android_asset';
+/**
+ * Get the assets URI prefix for loading reader resources
+ * - On web dev: Use /assets (served by webpack CopyWebpackPlugin)
+ * - On web production: Use /assets (bundled by webpack)
+ * - On native dev: Use /assets (fallback to web assets path)
+ * - On native production: Use file:///android_asset
+ */
+const getAssetsUriPrefix = () => {
+  if (!__DEV__) {
+    // Production: use android_asset for native, /assets for web
+    return Platform.OS === 'web' ? '/assets' : 'file:///android_asset';
+  }
+  // Development: use /assets for all (webpack serves it)
+  return '/assets';
+};
+
+const assetsUriPrefix = getAssetsUriPrefix();
 
 const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
   const {
@@ -73,12 +90,17 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
     webViewRef,
   } = useChapterContext();
   const theme = useTheme();
-  // Use state for settings so they update when MMKV changes
-  const [readerSettings, setReaderSettings] = useState<ChapterReaderSettings>(
-    () =>
-      getMMKVObject<ChapterReaderSettings>(CHAPTER_READER_SETTINGS) ||
+  // Store initial settings for HTML generation (to prevent WebView reload)
+  const initialReaderSettings = useRef<ChapterReaderSettings>(
+    getMMKVObject<ChapterReaderSettings>(CHAPTER_READER_SETTINGS) ||
       initialChapterReaderSettings,
   );
+  // Use state for settings so they update when MMKV changes
+  const [readerSettings, setReaderSettings] = useState<ChapterReaderSettings>(
+    () => initialReaderSettings.current,
+  );
+  const [processedHtml, setProcessedHtml] = useState<string | null>(null);
+  const [_isProcessing, setIsProcessing] = useState(true);
   const chapterGeneralSettings = useMemo(
     () =>
       getMMKVObject<ChapterGeneralSettings>(CHAPTER_GENERAL_SETTINGS) ||
@@ -90,17 +112,70 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
 
   // Update readerSettings when chapter changes
   useEffect(() => {
-    setReaderSettings(
+    const newSettings =
       getMMKVObject<ChapterReaderSettings>(CHAPTER_READER_SETTINGS) ||
-        initialChapterReaderSettings,
-    );
+      initialChapterReaderSettings;
+    initialReaderSettings.current = newSettings;
+    setReaderSettings(newSettings);
+    webViewLoadedRef.current = false; // Reset on chapter change
   }, [chapter.id]);
 
   // Update battery level when chapter changes to ensure fresh value on navigation
-  const batteryLevel = useMemo(() => getBatteryLevelSync(), [chapter.id]);
+  const batteryLevel = useMemo(() => getBatteryLevelSync(), []);
   const plugin = getPlugin(novel?.pluginId);
-  const pluginCustomJS = `file://${PLUGIN_STORAGE}/${plugin?.id}/custom.js`;
-  const pluginCustomCSS = `file://${PLUGIN_STORAGE}/${plugin?.id}/custom.css`;
+
+  // State for plugin custom files content (loaded asynchronously)
+  const [pluginCustomJSContent, setPluginCustomJSContent] = useState('');
+  const [pluginCustomCSSContent, setPluginCustomCSSContent] = useState('');
+
+  // Load plugin custom files on web platform
+  useEffect(() => {
+    const loadPluginCustomFiles = async () => {
+      if (!plugin?.id || Platform.OS !== 'web') {
+        return;
+      }
+
+      try {
+        const customJSPath = `${PLUGIN_STORAGE}/${plugin.id}/custom.js`;
+        const customCSSPath = `${PLUGIN_STORAGE}/${plugin.id}/custom.css`;
+
+        // Try to load custom.js
+        try {
+          const jsContent = await NativeFile.readFile(customJSPath);
+          setPluginCustomJSContent(jsContent);
+          console.log(
+            '[WebViewReader] Loaded custom.js for plugin:',
+            plugin.id,
+          );
+        } catch (err) {
+          console.warn(
+            '[WebViewReader] custom.js not found for plugin:',
+            plugin.id,
+          );
+        }
+
+        // Try to load custom.css
+        try {
+          const cssContent = await NativeFile.readFile(customCSSPath);
+          setPluginCustomCSSContent(cssContent);
+          console.log(
+            '[WebViewReader] Loaded custom.css for plugin:',
+            plugin.id,
+          );
+        } catch (err) {
+          console.warn(
+            '[WebViewReader] custom.css not found for plugin:',
+            plugin.id,
+          );
+        }
+      } catch (err) {
+        console.warn('[WebViewReader] Error loading plugin custom files:', err);
+      }
+    };
+
+    loadPluginCustomFiles();
+  }, [plugin?.id]);
+
   const nextChapterScreenVisible = useRef<boolean>(false);
   const autoStartTTSRef = useRef<boolean>(false);
   const isTTSReadingRef = useRef<boolean>(false);
@@ -108,9 +183,20 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
   const appStateRef = useRef(AppState.currentState);
   const ttsQueueRef = useRef<string[]>([]);
   const ttsQueueIndexRef = useRef<number>(0);
+  const webViewLoadedRef = useRef<boolean>(false);
 
   useEffect(() => {
     readerSettingsRef.current = readerSettings;
+
+    // Inject settings update via JavaScript instead of reloading WebView
+    if (webViewLoadedRef.current && webViewRef.current) {
+      webViewRef.current.injectJavaScript(`
+        if (window.reader && window.reader.readerSettings) {
+          reader.readerSettings.val = ${JSON.stringify(readerSettings)};
+        }
+      `);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readerSettings]);
 
   useEffect(() => {
@@ -185,9 +271,10 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
           // Update WebView settings
           webViewRef.current?.injectJavaScript(
             `
-            reader.readerSettings.val = ${MMKVStorage.getString(
+            const newSettings = ${MMKVStorage.getString(
               CHAPTER_READER_SETTINGS,
             )};
+            reader.readerSettings.val = newSettings;
             // Auto-restart TTS if currently reading
             if (window.tts && tts.reading) {
               const currentElement = tts.currentElement;
@@ -225,6 +312,24 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
       mmkvListener.remove();
     };
   }, [webViewRef]);
+
+  // Process HTML to convert file:// URLs to blob URLs on web
+  useEffect(() => {
+    const processHtml = async () => {
+      setIsProcessing(true);
+      try {
+        const processed = await processHtmlForWeb(html || '');
+        setProcessedHtml(processed);
+      } catch (error) {
+        console.error('[WebViewReader] Failed to process HTML:', error);
+        setProcessedHtml(html || '');
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+
+    processHtml();
+  }, [html, chapter.id]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextState => {
@@ -286,10 +391,163 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
       rate: readerSettingsRef.current.tts?.rate || 1,
     });
   };
+
+  // Memoize the source to prevent WebView reload when settings change
+  const webViewSource = useMemo(
+    () => ({
+      baseUrl: !chapter.isDownloaded ? plugin?.site : undefined,
+      headers: plugin?.imageRequestInit?.headers,
+      method: plugin?.imageRequestInit?.method,
+      body: plugin?.imageRequestInit?.body,
+      html: ` 
+    <!DOCTYPE html>
+      <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+          <script>
+            // Inject ReactNativeWebView bridge early so it's available for all scripts
+            window.ReactNativeWebView = {
+              postMessage: (data) => {
+                window.parent.postMessage({
+                  type: 'iframe-message',
+                  data: data
+                }, '*');
+              }
+            };
+            console.log('[HTML] ReactNativeWebView bridge created');
+          </script>
+          <link rel="stylesheet" href="${assetsUriPrefix}/css/index.css">
+          <link rel="stylesheet" href="${assetsUriPrefix}/css/pageReader.css">
+          <link rel="stylesheet" href="${assetsUriPrefix}/css/toolWrapper.css">
+          <link rel="stylesheet" href="${assetsUriPrefix}/css/tts.css">
+          <style>
+          :root {
+            --StatusBar-currentHeight: ${StatusBar.currentHeight}px;
+            --readerSettings-theme: ${initialReaderSettings.current.theme};
+            --readerSettings-padding: ${
+              initialReaderSettings.current.padding
+            }px;
+            --readerSettings-textSize: ${
+              initialReaderSettings.current.textSize
+            }px;
+            --readerSettings-textColor: ${
+              initialReaderSettings.current.textColor
+            };
+            --readerSettings-textAlign: ${
+              initialReaderSettings.current.textAlign
+            };
+            --readerSettings-lineHeight: ${
+              initialReaderSettings.current.lineHeight
+            };
+            --readerSettings-fontFamily: ${
+              initialReaderSettings.current.fontFamily
+            };
+            --theme-primary: ${theme.primary};
+            --theme-onPrimary: ${theme.onPrimary};
+            --theme-secondary: ${theme.secondary};
+            --theme-tertiary: ${theme.tertiary};
+            --theme-onTertiary: ${theme.onTertiary};
+            --theme-onSecondary: ${theme.onSecondary};
+            --theme-surface: ${theme.surface};
+            --theme-surface-0-9: ${color(theme.surface).alpha(0.9).toString()};
+            --theme-onSurface: ${theme.onSurface};
+            --theme-surfaceVariant: ${theme.surfaceVariant};
+            --theme-onSurfaceVariant: ${theme.onSurfaceVariant};
+            --theme-outline: ${theme.outline};
+            --theme-rippleColor: ${theme.rippleColor};
+            }
+            
+            @font-face {
+              font-family: ${initialReaderSettings.current.fontFamily};
+              src: url("file:///android_asset/fonts/${
+                initialReaderSettings.current.fontFamily
+              }.ttf");
+            }
+            </style>
+
+          ${
+            pluginCustomCSSContent
+              ? `<style>${pluginCustomCSSContent}</style>`
+              : ''
+          }
+          <style>${initialReaderSettings.current.customCSS}</style>
+        </head>
+        <body class="${chapterGeneralSettings.pageReader ? 'page-reader' : ''}">
+          <div class="transition-chapter" style="transform: ${
+            nextChapterScreenVisible.current
+              ? 'translateX(-100%)'
+              : 'translateX(0%)'
+          };
+          ${chapterGeneralSettings.pageReader ? '' : 'display: none'}"
+          ">${chapter.name}</div>
+          <div id="LNReader-chapter">
+            ${processedHtml ?? html}  
+          </div>
+          <div id="reader-ui"></div>
+          </body>
+          <script>
+            var initialPageReaderConfig = ${JSON.stringify({
+              nextChapterScreenVisible: nextChapterScreenVisible.current,
+            })};
+
+            var initialReaderConfig = ${JSON.stringify({
+              readerSettings: initialReaderSettings.current,
+              chapterGeneralSettings,
+              novel,
+              chapter,
+              nextChapter,
+              prevChapter,
+              batteryLevel,
+              autoSaveInterval: 2222,
+              DEBUG: __DEV__,
+              strings: {
+                finished: `${getString(
+                  'readerScreen.finished',
+                )}: ${chapter.name.trim()}`,
+                nextChapter: getString('readerScreen.nextChapter', {
+                  name: nextChapter?.name,
+                }),
+                noNextChapter: getString('readerScreen.noNextChapter'),
+              },
+            })};
+          </script>
+          <script src="${assetsUriPrefix}/js/polyfill-onscrollend.js"></script>
+          <script src="${assetsUriPrefix}/js/icons.js"></script>
+          <script src="${assetsUriPrefix}/js/van.js"></script>
+          <script src="${assetsUriPrefix}/js/text-vibe.js"></script>
+          <script src="${assetsUriPrefix}/js/core.js"></script>
+          <script src="${assetsUriPrefix}/js/index.js"></script>
+          ${
+            pluginCustomJSContent
+              ? `<script>${pluginCustomJSContent}</script>`
+              : ''
+          }
+          <script>
+            ${initialReaderSettings.current.customJS}
+          </script>
+      </html>
+      `,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      chapter.id, // Only rebuild when chapter changes
+      chapter.isDownloaded,
+      plugin?.site,
+      plugin?.imageRequestInit?.headers,
+      plugin?.imageRequestInit?.method,
+      plugin?.imageRequestInit?.body,
+      processedHtml,
+      html,
+      pluginCustomJSContent,
+      pluginCustomCSSContent,
+      chapterGeneralSettings.pageReader,
+    ],
+  );
+
   return (
     <WebView
       ref={webViewRef}
-      style={{ backgroundColor: readerSettings.theme }}
+      style={{ backgroundColor: initialReaderSettings.current.theme }}
       allowFileAccess={true}
       originWhitelist={['*']}
       scalesPageToFit={true}
@@ -297,6 +555,9 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
       javaScriptEnabled={true}
       webviewDebuggingEnabled={__DEV__}
       onLoadEnd={() => {
+        // Mark WebView as loaded
+        webViewLoadedRef.current = true;
+
         // Update battery level when WebView finishes loading
         const currentBatteryLevel = getBatteryLevelSync();
         webViewRef.current?.injectJavaScript(
@@ -409,113 +670,7 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
             break;
         }
       }}
-      source={{
-        baseUrl: !chapter.isDownloaded ? plugin?.site : undefined,
-        headers: plugin?.imageRequestInit?.headers,
-        method: plugin?.imageRequestInit?.method,
-        body: plugin?.imageRequestInit?.body,
-        html: ` 
-        <!DOCTYPE html>
-          <html>
-            <head>
-              <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-              <link rel="stylesheet" href="${assetsUriPrefix}/css/index.css">
-              <link rel="stylesheet" href="${assetsUriPrefix}/css/pageReader.css">
-              <link rel="stylesheet" href="${assetsUriPrefix}/css/toolWrapper.css">
-              <link rel="stylesheet" href="${assetsUriPrefix}/css/tts.css">
-              <style>
-              :root {
-                --StatusBar-currentHeight: ${StatusBar.currentHeight}px;
-                --readerSettings-theme: ${readerSettings.theme};
-                --readerSettings-padding: ${readerSettings.padding}px;
-                --readerSettings-textSize: ${readerSettings.textSize}px;
-                --readerSettings-textColor: ${readerSettings.textColor};
-                --readerSettings-textAlign: ${readerSettings.textAlign};
-                --readerSettings-lineHeight: ${readerSettings.lineHeight};
-                --readerSettings-fontFamily: ${readerSettings.fontFamily};
-                --theme-primary: ${theme.primary};
-                --theme-onPrimary: ${theme.onPrimary};
-                --theme-secondary: ${theme.secondary};
-                --theme-tertiary: ${theme.tertiary};
-                --theme-onTertiary: ${theme.onTertiary};
-                --theme-onSecondary: ${theme.onSecondary};
-                --theme-surface: ${theme.surface};
-                --theme-surface-0-9: ${color(theme.surface)
-                  .alpha(0.9)
-                  .toString()};
-                --theme-onSurface: ${theme.onSurface};
-                --theme-surfaceVariant: ${theme.surfaceVariant};
-                --theme-onSurfaceVariant: ${theme.onSurfaceVariant};
-                --theme-outline: ${theme.outline};
-                --theme-rippleColor: ${theme.rippleColor};
-                }
-                
-                @font-face {
-                  font-family: ${readerSettings.fontFamily};
-                  src: url("file:///android_asset/fonts/${
-                    readerSettings.fontFamily
-                  }.ttf");
-                }
-                </style>
-
-              <link rel="stylesheet" href="${pluginCustomCSS}">
-              <style>${readerSettings.customCSS}</style>
-            </head>
-            <body class="${
-              chapterGeneralSettings.pageReader ? 'page-reader' : ''
-            }">
-              <div class="transition-chapter" style="transform: ${
-                nextChapterScreenVisible.current
-                  ? 'translateX(-100%)'
-                  : 'translateX(0%)'
-              };
-              ${chapterGeneralSettings.pageReader ? '' : 'display: none'}"
-              ">${chapter.name}</div>
-              <div id="LNReader-chapter">
-                ${html}  
-              </div>
-              <div id="reader-ui"></div>
-              </body>
-              <script>
-                var initialPageReaderConfig = ${JSON.stringify({
-                  nextChapterScreenVisible: nextChapterScreenVisible.current,
-                })};
-
-
-                var initialReaderConfig = ${JSON.stringify({
-                  readerSettings,
-                  chapterGeneralSettings,
-                  novel,
-                  chapter,
-                  nextChapter,
-                  prevChapter,
-                  batteryLevel,
-                  autoSaveInterval: 2222,
-                  DEBUG: __DEV__,
-                  strings: {
-                    finished: `${getString(
-                      'readerScreen.finished',
-                    )}: ${chapter.name.trim()}`,
-                    nextChapter: getString('readerScreen.nextChapter', {
-                      name: nextChapter?.name,
-                    }),
-                    noNextChapter: getString('readerScreen.noNextChapter'),
-                  },
-                })}
-              </script>
-              <script src="${assetsUriPrefix}/js/polyfill-onscrollend.js"></script>
-              <script src="${assetsUriPrefix}/js/icons.js"></script>
-              <script src="${assetsUriPrefix}/js/van.js"></script>
-              <script src="${assetsUriPrefix}/js/text-vibe.js"></script>
-              <script src="${assetsUriPrefix}/js/core.js"></script>
-              <script src="${assetsUriPrefix}/js/index.js"></script>
-              <script src="${pluginCustomJS}"></script>
-              <script>
-                ${readerSettings.customJS}
-              </script>
-          </html>
-          `,
-      }}
+      source={webViewSource}
     />
   );
 };

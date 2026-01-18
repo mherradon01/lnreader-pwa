@@ -20,7 +20,7 @@ export const exists = async (
     q += ` and '${parentId}' in parents `;
   }
   const res = await list({ q });
-  return res.files.find(file => file.name === fileName);
+  return res.files?.find(file => file.name === fileName);
 };
 
 export const makeDir = async (fileName: string, parentId?: string) => {
@@ -75,7 +75,7 @@ export const getBackups = async (parentId: string, marked?: boolean) => {
   }
   return list({
     q,
-  }).then(res => res.files);
+  }).then(res => res.files || []);
 };
 
 export const readDir = async (parentId: string, marked?: boolean) => {

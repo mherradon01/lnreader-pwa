@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   },
   container: {
     borderRadius: 28,
-    shadowColor: 'transparent',
+    boxShadow: 'none',
   },
   content: {
     fontSize: 16,

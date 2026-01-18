@@ -238,6 +238,12 @@ export const useNovel = (novelOrPath: string | NovelInfo, pluginId: string) => {
 
   const getChapters = useCallback(async () => {
     const page = pages[pageIndex];
+    console.log('[useNovel.getChapters] Starting fetch:', {
+      novelId: novel?.id,
+      page,
+      novelPath,
+      pluginId,
+    });
 
     if (novel && page) {
       let newChapters: ChapterInfo[] = [];
@@ -250,27 +256,73 @@ export const useNovel = (novelOrPath: string | NovelInfo, pluginId: string) => {
       ] as const;
 
       let chapterCount = getChapterCount(novel.id, page);
+      console.log(
+        '[useNovel.getChapters] Chapter count from DB:',
+        chapterCount,
+      );
 
       if (chapterCount) {
         try {
+          console.log(
+            '[useNovel.getChapters] Loading chapters from database cache',
+          );
           newChapters = getPageChaptersBatched(...config) || [];
+          console.log(
+            '[useNovel.getChapters] Loaded from cache:',
+            newChapters.length,
+          );
         } catch (error) {
-          console.error('teaser', error);
+          console.error(
+            '[useNovel.getChapters] Error loading from cache:',
+            error,
+          );
         }
       }
       // Fetch next page if no chapters
       else if (Number(page)) {
+        console.log(
+          '[useNovel.getChapters] No chapters in DB, fetching from plugin',
+        );
         _setChapters([]);
-        const sourcePage = await fetchPage(pluginId, novelPath, page);
-        const sourceChapters = sourcePage.chapters.map(ch => {
-          return {
-            ...ch,
+        try {
+          console.log('[useNovel.getChapters] Calling fetchPage:', {
+            pluginId,
+            novelPath,
             page,
-          };
-        });
-        await insertChapters(novel.id, sourceChapters);
-        newChapters = await _getPageChapters(...config);
-        chapterCount = getChapterCount(novel.id, page);
+          });
+          const sourcePage = await fetchPage(pluginId, novelPath, page);
+          console.log(
+            '[useNovel.getChapters] Received chapters from plugin:',
+            sourcePage.chapters?.length,
+          );
+
+          const sourceChapters = sourcePage.chapters.map(ch => {
+            return {
+              ...ch,
+              page,
+            };
+          });
+          console.log(
+            '[useNovel.getChapters] Inserting chapters to database:',
+            sourceChapters.length,
+          );
+          await insertChapters(novel.id, sourceChapters);
+          console.log(
+            '[useNovel.getChapters] Chapters inserted, loading from DB',
+          );
+          newChapters = await _getPageChapters(...config);
+          chapterCount = getChapterCount(novel.id, page);
+          console.log(
+            '[useNovel.getChapters] Loaded from DB after insert:',
+            newChapters.length,
+          );
+        } catch (error) {
+          console.error(
+            '[useNovel.getChapters] Error fetching chapters from plugin:',
+            error,
+          );
+          throw error;
+        }
       }
 
       setBatchInformation({
@@ -278,7 +330,16 @@ export const useNovel = (novelOrPath: string | NovelInfo, pluginId: string) => {
         total: Math.floor(chapterCount / 300),
         totalChapters: chapterCount,
       });
+      console.log(
+        '[useNovel.getChapters] Setting chapters:',
+        newChapters.length,
+      );
       setChapters(newChapters);
+    } else {
+      console.log('[useNovel.getChapters] Skipping - missing novel or page', {
+        hasNovel: !!novel,
+        hasPage: !!page,
+      });
     }
   }, [
     novel,
@@ -539,17 +600,24 @@ export const useNovel = (novelOrPath: string | NovelInfo, pluginId: string) => {
 
   useEffect(() => {
     if (novel === undefined) return;
+    console.log('[useNovel.useEffect] Starting to fetch chapters for novel:', {
+      novelId: novel.id,
+      novelPath,
+    });
     setFetching(true);
     getChapters()
       .catch(e => {
+        console.error('[useNovel.useEffect] Error fetching chapters:', e);
         if (__DEV__) console.error(e);
 
-        showToast(e.message);
+        showToast(e.message || 'Failed to fetch chapters');
         setFetching(false);
       })
       .finally(() => {
+        console.log('[useNovel.useEffect] Chapter fetch completed');
         setFetching(false);
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getChapters, novel, novelOrPath]);
 
   // #endregion

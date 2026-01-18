@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     width: '33%',
   },
   horizontalContainer: {
-    width: undefined,
+    width: 'auto',
     marginHorizontal: 4,
   },
   card: {
@@ -137,11 +137,8 @@ const styles = StyleSheet.create({
     height: 140,
     borderRadius: 16,
     overflow: 'hidden',
-    // Shadow for iOS
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    // Shadow for iOS/web
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
     // Elevation for Android
     elevation: 2,
   },

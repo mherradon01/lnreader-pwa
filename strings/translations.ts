@@ -126,7 +126,13 @@ i18n.enableFallback = true;
 
 const getSavedLocale = (): string => {
   try {
-    return MMKVStorage.getString('APP_LOCALE') || '';
+    // Use localStorage for synchronous access during initialization
+    // MMKV async version will be used for updates
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const stored = window.localStorage.getItem('APP_LOCALE');
+      return stored || '';
+    }
+    return '';
   } catch {
     return '';
   }
@@ -155,7 +161,14 @@ export const localization = detectedLocale;
 
 export const setLocale = (locale: string) => {
   try {
-    MMKVStorage.set('APP_LOCALE', locale);
+    // Store in both localStorage (sync) and MMKV (async) for compatibility
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem('APP_LOCALE', locale);
+    }
+    // Also store in MMKV for persistence
+    MMKVStorage.set('APP_LOCALE', locale).catch(error => {
+      showToast(`Failed to set locale in MMKV: ${error}`);
+    });
   } catch (error) {
     showToast(`Failed to set locale: ${error}`);
   }

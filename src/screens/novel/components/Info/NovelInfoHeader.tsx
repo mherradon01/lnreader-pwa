@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import color from 'color';
 
@@ -8,6 +8,8 @@ import { IconButton } from 'react-native-paper';
 import MaterialCommunityIcons from '@react-native-vector-icons/material-design-icons';
 
 import { showToast } from '@utils/showToast';
+import { getWebSafeCoverUri } from '@utils/coverUtils';
+import { defaultCover } from '@plugins/helpers/constants';
 
 import {
   CoverImage,
@@ -105,16 +107,22 @@ const NovelInfoHeader = ({
     showToast('Not available while loading');
   };
 
+  const [coverUri, setCoverUri] = useState<string>(defaultCover);
+
+  useEffect(() => {
+    getWebSafeCoverUri(novel.cover).then(setCoverUri);
+  }, [novel.cover]);
+
   return (
     <>
       <CoverImage
-        source={{ uri: novel.cover }}
+        source={{ uri: coverUri }}
         theme={theme}
         hideBackdrop={hideBackdrop}
       >
         <NovelInfoContainer>
           <NovelThumbnail
-            source={{ uri: novel.cover }}
+            source={{ uri: coverUri }}
             theme={theme}
             setCustomNovelCover={
               isLoading ? showNotAvailable : setCustomNovelCover

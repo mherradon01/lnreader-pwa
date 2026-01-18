@@ -1,4 +1,16 @@
-const { div, p, img, button } = van.tags;
+// Prevent redeclaration error if script is loaded multiple times
+(function() {
+  'use strict';
+  
+  // Check if already initialized
+  if (window.__readerUIInitialized) {
+    return;
+  }
+  window.__readerUIInitialized = true;
+
+if (typeof div === 'undefined') {
+  var { div, p, img, button } = van.tags;
+}
 
 const ChapterEnding = () => {
   return () =>
@@ -344,8 +356,35 @@ const ReaderUI = () => {
     TTSController(),
     ModalWrapper(),
     Footer(),
-    ChapterEnding(),
   );
 };
 
-van.add(document.getElementById('reader-ui'), ReaderUI());
+const initReaderUI = () => {
+  const readerUIElement = document.getElementById('reader-ui');
+  if (readerUIElement) {
+    van.add(readerUIElement, ReaderUI());
+  } else {
+    console.warn('reader-ui element not found');
+  }
+};
+
+const initChapterEnding = () => {
+  const chapterElement = document.getElementById('LNReader-chapter');
+  if (chapterElement) {
+    van.add(chapterElement, ChapterEnding());
+  } else {
+    console.warn('LNReader-chapter element not found');
+  }
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initReaderUI();
+    initChapterEnding();
+  });
+} else {
+  initReaderUI();
+  initChapterEnding();
+}
+
+})(); // End of IIFE

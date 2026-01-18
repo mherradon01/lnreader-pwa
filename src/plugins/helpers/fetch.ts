@@ -2,6 +2,7 @@
 import { getUserAgent } from '@hooks/persisted/useUserAgent';
 import NativeFile from '@specs/NativeFile';
 import { parse as parseProto } from 'protobufjs';
+import { proxyFetch } from '@utils/proxyFetch';
 
 type FetchInit = {
   headers?: Record<string, string> | Headers;
@@ -19,11 +20,15 @@ const makeInit = (init?: FetchInit) => {
     'Accept-Encoding': 'gzip, deflate',
     'Cache-Control': 'max-age=0',
     'User-Agent': getUserAgent(),
+    'Referrer-Policy': 'no-referrer',
   };
   if (init?.headers) {
     if (init.headers instanceof Headers) {
       if (!init.headers.get('User-Agent') && defaultHeaders['User-Agent']) {
         init.headers.set('User-Agent', defaultHeaders['User-Agent']);
+      }
+      if (!init.headers.get('Referrer-Policy')) {
+        init.headers.set('Referrer-Policy', defaultHeaders['Referrer-Policy']);
       }
     } else {
       init.headers = {
@@ -45,7 +50,7 @@ export const fetchApi = async (
   init?: FetchInit,
 ): Promise<Response> => {
   init = makeInit(init);
-  return await fetch(url, init);
+  return await proxyFetch(url, init);
 };
 
 const FILE_READER_PREFIX_LENGTH = 'data:application/octet-stream;base64,'
@@ -56,13 +61,29 @@ export const downloadFile = async (
   destPath: string,
   init?: FetchInit,
 ): Promise<void> => {
-  init = makeInit(init);
+  // Don't add Referrer-Policy header for file downloads as some servers reject it in preflight
+  const headers = {
+    'Connection': 'keep-alive',
+    'Accept': '*/*',
+    'Accept-Language': '*',
+    'Sec-Fetch-Mode': 'cors',
+    'Accept-Encoding': 'gzip, deflate',
+    'Cache-Control': 'max-age=0',
+    'User-Agent': getUserAgent(),
+  };
+  if (
+    init?.headers &&
+    typeof init.headers === 'object' &&
+    !(init.headers instanceof Headers)
+  ) {
+    Object.assign(headers, init.headers);
+  }
   return NativeFile.downloadFile(
     url,
     destPath,
-    init.method || 'get',
-    init.headers as Record<string, string>,
-    init.body?.toString(),
+    init?.method || 'GET',
+    headers,
+    init?.body?.toString(),
   );
 };
 
@@ -80,7 +101,7 @@ export const fetchText = async (
 ): Promise<string> => {
   init = makeInit(init);
   try {
-    const res = await fetch(url, init);
+    const res = await proxyFetch(url, init);
     if (!res.ok) {
       throw new Error();
     }
@@ -159,7 +180,7 @@ export const fetchProto = async function (
   bodyArray.set(headers, 0);
   bodyArray.set(encodedrequest, headers.length);
 
-  return fetch(url, {
+  return proxyFetch(url, {
     method: 'POST',
     ...init,
     body: bodyArray,

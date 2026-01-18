@@ -5,10 +5,10 @@ const ReactCompilerConfig = {
 module.exports = function (api) {
   api.cache(true);
   return {
-    presets: ['module:@react-native/babel-preset'],
+    // babel-preset-expo is more robust for cross-platform (Web/iOS/Android)
+    presets: ['babel-preset-expo'], 
     plugins: [
       'module:@babel/plugin-transform-export-namespace-from',
-      ['babel-plugin-react-compiler', ReactCompilerConfig],
       [
         'module-resolver',
         {
@@ -40,6 +40,8 @@ module.exports = function (api) {
           path: '.env',
         },
       ],
+      // Compiler last
+      ['babel-plugin-react-compiler', ReactCompilerConfig],
     ],
   };
 };

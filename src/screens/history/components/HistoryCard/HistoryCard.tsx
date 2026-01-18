@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useNavigation } from '@react-navigation/native';
@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import { IconButtonV2 } from '@components';
 
 import { defaultCover } from '@plugins/helpers/constants';
+import { getWebSafeCoverUri } from '@utils/coverUtils';
 import { getString } from '@strings/translations';
 import { useTheme } from '@hooks/persisted';
 
@@ -26,6 +27,11 @@ const HistoryCard: React.FC<HistoryCardProps> = ({
 }) => {
   const theme = useTheme();
   const { navigate } = useNavigation<HistoryScreenProps['navigation']>();
+  const [coverUri, setCoverUri] = useState<string>(defaultCover);
+
+  useEffect(() => {
+    getWebSafeCoverUri(history.novelCover).then(setCoverUri);
+  }, [history.novelCover]);
 
   return (
     <Pressable
@@ -59,10 +65,7 @@ const HistoryCard: React.FC<HistoryCardProps> = ({
             })
           }
         >
-          <Image
-            source={{ uri: history.novelCover || defaultCover }}
-            style={styles.cover}
-          />
+          <Image source={{ uri: coverUri }} style={styles.cover} />
         </Pressable>
         <View style={styles.detailsContainer}>
           <Text
