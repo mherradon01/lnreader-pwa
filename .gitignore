@@ -91,3 +91,4 @@ flake.lock
 
 .cursor/
 .vercel
+.env*.local

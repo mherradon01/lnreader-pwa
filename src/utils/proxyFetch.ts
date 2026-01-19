@@ -1,65 +1,69 @@
 import { Platform } from 'react-native';
 
 /**
- * Rewrites URLs to use the appropriate proxy based on environment.
- * On web in development: uses webpack dev server proxies (/cors-proxy, /github-proxy)
- * On web in production: uses Vercel API routes (/api/cors-proxy, /api/github-proxy)
- * On native platforms: returns the URL unchanged.
+ * Gets the configured proxy URL from settings.
+ * Returns null if no proxy is configured or proxy is disabled.
+ */
+export const getProxyUrl = (): string | null => {
+  try {
+    // Import dynamically to avoid circular dependencies
+    const {
+      getEffectiveProxyUrl,
+    } = require('@hooks/persisted/useProxySettings');
+    return getEffectiveProxyUrl();
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Rewrites URLs to use the configured proxy if one is set.
+ * If no proxy is configured, returns the URL unchanged.
+ * On native platforms, always returns URL unchanged (native handles CORS differently).
  */
 export const proxyUrl = (url: string): string => {
+  // On native platforms, don't proxy - native doesn't have CORS issues
   if (Platform.OS !== 'web') {
     return url;
   }
 
-  // Don't proxy URLs that are already proxied or are relative/same-origin
-  if (
-    url.startsWith('/api/cors-proxy') ||
-    url.startsWith('/api/github-proxy') ||
-    url.startsWith('/cors-proxy') ||
-    url.startsWith('/github-proxy') ||
-    url.startsWith('/')
-  ) {
+  const configuredProxy = getProxyUrl();
+
+  // If no proxy configured, return URL as-is
+  if (!configuredProxy) {
     return url;
   }
 
-  // Determine if we're in a development or production environment
-  const isDev =
-    typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1');
-
-  // Proxy raw.githubusercontent.com URLs
-  if (url.includes('raw.githubusercontent.com')) {
-    // Extract the path after the domain
-    const path = url.replace('https://raw.githubusercontent.com/', '');
-    // Dev: use path-based proxy, Prod: use query param based proxy
-    return isDev
-      ? `/github-proxy/${path}`
-      : `/api/github-proxy?path=${encodeURIComponent(path)}`;
+  // Don't proxy URLs that are already relative/same-origin
+  if (url.startsWith('/')) {
+    return url;
   }
 
-  // For other cross-origin URLs on web, use a generic CORS proxy
-  // This handles any external API calls that would be CORS blocked
-  try {
-    const currentOrigin =
-      typeof window !== 'undefined' ? window.location.origin : '';
-
-    // If it's a different origin, proxy it through the appropriate CORS proxy
-    if (currentOrigin && !url.startsWith(currentOrigin)) {
-      const proxyPath = isDev ? '/cors-proxy' : '/api/cors-proxy';
-      return `${proxyPath}?url=${encodeURIComponent(url)}`;
-    }
-  } catch {
-    // Invalid URL, return as-is
+  // Don't proxy data: URLs
+  if (url.startsWith('data:')) {
+    return url;
   }
 
-  return url;
+  // Don't proxy blob: URLs
+  if (url.startsWith('blob:')) {
+    return url;
+  }
+
+  // Don't proxy URLs that are already going through the configured proxy
+  if (url.startsWith(configuredProxy)) {
+    return url;
+  }
+
+  // Route through the configured proxy
+  // The proxy should accept a 'url' query parameter
+  const separator = configuredProxy.includes('?') ? '&' : '?';
+  return `${configuredProxy}${separator}url=${encodeURIComponent(url)}`;
 };
 
 /**
- * Fetch wrapper that automatically proxies URLs on web to bypass CORS.
- * On web, all external URLs are routed through the /cors-proxy endpoint
- * to avoid CORS issues. On native, uses direct fetch.
+ * Fetch wrapper that automatically proxies URLs if a proxy is configured.
+ * If no proxy is configured, uses direct fetch.
+ * Adds headers to make requests appear as if they're coming from the legitimate site.
  */
 export const proxyFetch = (
   url: string,
@@ -67,7 +71,61 @@ export const proxyFetch = (
 ): Promise<Response> => {
   const proxiedUrl = proxyUrl(url);
 
-  // Don't add custom headers that might trigger preflight requests
-  // The proxy server will handle CORS headers properly
-  return fetch(proxiedUrl, options);
+  // Extract the origin from the original URL for proper headers
+  let origin = '';
+  let referer = '';
+  try {
+    const urlObj = new URL(url);
+    origin = urlObj.origin;
+    referer = url;
+  } catch {
+    // If URL parsing fails, continue without origin/referer
+  }
+
+  // Merge custom headers with existing options
+  const headers = new Headers(options?.headers);
+
+  // Add User-Agent to mimic a real browser (if not already set)
+  if (!headers.has('User-Agent')) {
+    headers.set(
+      'User-Agent',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    );
+  }
+
+  // Add Referer header to appear as if request is from the site itself
+  if (origin && !headers.has('Referer')) {
+    headers.set('Referer', referer);
+  }
+
+  // Add Origin header for the legitimate site
+  if (origin && !headers.has('Origin')) {
+    headers.set('Origin', origin);
+  }
+
+  // Add Accept header to mimic browser behavior
+  if (!headers.has('Accept')) {
+    headers.set(
+      'Accept',
+      'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+    );
+  }
+
+  // Add Accept-Language
+  if (!headers.has('Accept-Language')) {
+    headers.set('Accept-Language', 'en-US,en;q=0.9');
+  }
+
+  // Add Accept-Encoding
+  if (!headers.has('Accept-Encoding')) {
+    headers.set('Accept-Encoding', 'gzip, deflate, br');
+  }
+
+  // Merge with original options
+  const enhancedOptions: RequestInit = {
+    ...options,
+    headers,
+  };
+
+  return fetch(proxiedUrl, enhancedOptions);
 };

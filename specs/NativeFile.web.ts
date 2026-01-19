@@ -29,28 +29,30 @@ const initDB = (): Promise<IDBDatabase> => {
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       db = request.result;
-      
+
       // Add close handler to reset db reference
       db.onclose = () => {
         db = null;
       };
-      
+
       // Verify the object store exists
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         // Object store doesn't exist, need to upgrade
         const currentVersion = db.version;
         db.close();
         db = null;
-        
+
         // Open with a higher version to trigger upgrade
         const upgradeRequest = indexedDB.open(DB_NAME, currentVersion + 1);
         upgradeRequest.onerror = () => reject(upgradeRequest.error);
         upgradeRequest.onsuccess = () => {
           db = upgradeRequest.result;
-          db.onclose = () => { db = null; };
+          db.onclose = () => {
+            db = null;
+          };
           resolve(db);
         };
-        upgradeRequest.onupgradeneeded = (event) => {
+        upgradeRequest.onupgradeneeded = event => {
           const database = (event.target as IDBOpenDBRequest).result;
           if (!database.objectStoreNames.contains(STORE_NAME)) {
             database.createObjectStore(STORE_NAME, { keyPath: 'path' });
@@ -61,7 +63,7 @@ const initDB = (): Promise<IDBDatabase> => {
       }
     };
 
-    request.onupgradeneeded = (event) => {
+    request.onupgradeneeded = event => {
       const database = (event.target as IDBOpenDBRequest).result;
       if (!database.objectStoreNames.contains(STORE_NAME)) {
         database.createObjectStore(STORE_NAME, { keyPath: 'path' });
@@ -131,40 +133,42 @@ const NativeFile = {
     if (cached !== undefined) {
       return cached;
     }
-    throw new Error(`File not found (not in cache): ${path}. This file needs to be read asynchronously first.`);
+    throw new Error(
+      `File not found (not in cache): ${path}. This file needs to be read asynchronously first.`,
+    );
   },
 
   copyFile: async (sourcePath: string, destPath: string): Promise<void> => {
-    console.log('[NativeFile.copyFile] Starting copy from:', sourcePath.substring(0, 50), 'to:', destPath);
+    // console.log('[NativeFile.copyFile] Starting copy from:', sourcePath.substring(0, 50), 'to:', destPath);
     let content: string;
     let isBase64 = false;
 
     // Handle data URIs (base64 encoded)
     if (sourcePath.startsWith('data:')) {
       try {
-        console.log('[NativeFile.copyFile] Processing data URI');
+        // console.log('[NativeFile.copyFile] Processing data URI');
         // Extract base64 data from data URI
         const parts = sourcePath.split(',');
         if (parts.length === 2) {
           content = parts[1];
           isBase64 = true;
-          console.log('[NativeFile.copyFile] Extracted base64, length:', content.length);
+          // console.log('[NativeFile.copyFile] Extracted base64, length:', content.length);
         } else {
           throw new Error('Invalid data URI format');
         }
       } catch (error) {
-        console.error('[NativeFile.copyFile] Error parsing data URI:', error);
+        // console.error('[NativeFile.copyFile] Error parsing data URI:', error);
         throw new Error(`Failed to parse data URI: ${sourcePath}`);
       }
     }
     // Handle blob URLs (from file uploads)
     else if (sourcePath.startsWith('blob:')) {
       try {
-        console.log('[NativeFile.copyFile] Fetching blob URL');
+        // console.log('[NativeFile.copyFile] Fetching blob URL');
         const response = await fetch(sourcePath);
         const blob = await response.blob();
-        console.log('[NativeFile.copyFile] Blob fetched, size:', blob.size);
-        
+        // console.log('[NativeFile.copyFile] Blob fetched, size:', blob.size);
+
         // For binary files (like EPUB), use base64 encoding
         const reader = new FileReader();
         const base64Promise = new Promise<string>((resolve, reject) => {
@@ -172,38 +176,44 @@ const NativeFile = {
             const result = reader.result as string;
             // Extract base64 data (remove data URI prefix)
             const base64 = result.split(',')[1];
-            console.log('[NativeFile.copyFile] Blob converted to base64, length:', base64.length);
+            // console.log('[NativeFile.copyFile] Blob converted to base64, length:', base64.length);
             resolve(base64);
           };
           reader.onerror = () => reject(reader.error);
         });
+        reader.readAsDataURL(blob);
 
         content = await base64Promise;
         isBase64 = true;
       } catch (error) {
-        console.error('[NativeFile.copyFile] Error reading blob:', error);
+        // console.error('[NativeFile.copyFile] Error reading blob:', error);
         throw new Error(`Failed to read blob: ${sourcePath}`);
       }
     } else {
       // Handle regular file paths
-      console.log('[NativeFile.copyFile] Reading from file path');
+      // console.log('[NativeFile.copyFile] Reading from file path');
       content = await NativeFile.readFile(sourcePath);
     }
 
     // Store file with base64 flag if needed
-    console.log('[NativeFile.copyFile] Storing file in IndexedDB, size:', content.length, 'isBase64:', isBase64);
+    // console.log('[NativeFile.copyFile] Storing file in IndexedDB, size:', content.length, 'isBase64:', isBase64);
     const database = await initDB();
     return new Promise((resolve, reject) => {
       const transaction = database.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.put({ path: destPath, content, isDirectory: false, isBase64 });
+      const request = store.put({
+        path: destPath,
+        content,
+        isDirectory: false,
+        isBase64,
+      });
 
       request.onsuccess = () => {
-        console.log('[NativeFile.copyFile] File stored successfully at:', destPath);
+        // console.log('[NativeFile.copyFile] File stored successfully at:', destPath);
         resolve();
       };
       request.onerror = () => {
-        console.error('[NativeFile.copyFile] Error storing file:', request.error);
+        // console.error('[NativeFile.copyFile] Error storing file:', request.error);
         reject(request.error);
       };
     });
@@ -216,7 +226,7 @@ const NativeFile = {
 
   exists: async (filePath: string): Promise<boolean> => {
     const database = await initDB();
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const transaction = database.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
       const request = store.get(filePath);
@@ -232,7 +242,7 @@ const NativeFile = {
     return fileCache.has(filePath);
   },
 
-  existsSyncWithDB: (filePath: string, database: IDBDatabase): boolean => {
+  existsSyncWithDB: (filePath: string, _database: IDBDatabase): boolean => {
     // Synchronous check using open transaction (non-blocking)
     // This is a workaround for IndexedDB being async
     // Returns false if we can't check synchronously
@@ -244,7 +254,11 @@ const NativeFile = {
     return new Promise((resolve, reject) => {
       const transaction = database.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.put({ path: filePath, content: '', isDirectory: true });
+      const request = store.put({
+        path: filePath,
+        content: '',
+        isDirectory: true,
+      });
 
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
@@ -271,7 +285,7 @@ const NativeFile = {
       const request = store.openCursor();
       const results: ReadDirResult[] = [];
 
-      request.onsuccess = (event) => {
+      request.onsuccess = event => {
         const cursor = (event.target as IDBRequest).result;
         if (cursor) {
           const path = cursor.value.path;
@@ -302,16 +316,13 @@ const NativeFile = {
     headers: { [key: string]: string } | Headers,
     body?: string,
   ): Promise<void> => {
-    // Proxy cross-origin URLs to bypass CORS on web
-    let proxyUrl = url;
-    if (url.includes('raw.githubusercontent.com')) {
-      proxyUrl = url.replace('https://raw.githubusercontent.com', '/github-proxy');
-    } else if (url.startsWith('http://') || url.startsWith('https://')) {
-      // Use CORS proxy for all cross-origin HTTP(S) URLs
-      proxyUrl = '/cors-proxy?url=' + encodeURIComponent(url);
-    }
+    // Import proxyUrl dynamically to avoid circular dependencies
+    const { proxyUrl } = await import('@utils/proxyFetch');
 
-    const response = await fetch(proxyUrl, {
+    // Use configured proxy if available
+    const fetchUrl = proxyUrl(url);
+
+    const response = await fetch(fetchUrl, {
       method,
       headers: headers instanceof Headers ? headers : new Headers(headers),
       body,
@@ -324,12 +335,12 @@ const NativeFile = {
     // For image files, read as blob and convert to base64
     const contentType = response.headers.get('content-type') || '';
     const isImage = contentType.startsWith('image/');
-    
+
     let content: string;
     let isBase64 = false;
 
     if (isImage) {
-      console.log('[NativeFile.downloadFile] Downloading image file as blob:', destPath);
+      // console.log('[NativeFile.downloadFile] Downloading image file as blob:', destPath);
       const blob = await response.blob();
       // Convert blob to base64
       content = await new Promise<string>((resolve, reject) => {
@@ -353,14 +364,19 @@ const NativeFile = {
     return new Promise((resolve, reject) => {
       const transaction = database.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.put({ path: destPath, content, isDirectory: false, isBase64 });
+      const request = store.put({
+        path: destPath,
+        content,
+        isDirectory: false,
+        isBase64,
+      });
 
       request.onsuccess = () => {
-        console.log('[NativeFile.downloadFile] File downloaded and stored:', destPath, 'isBase64:', isBase64);
+        // console.log('[NativeFile.downloadFile] File downloaded and stored:', destPath, 'isBase64:', isBase64);
         resolve();
       };
       request.onerror = () => {
-        console.error('[NativeFile.downloadFile] Error storing file:', request.error);
+        // console.error('[NativeFile.downloadFile] Error storing file:', request.error);
         reject(request.error);
       };
     });
