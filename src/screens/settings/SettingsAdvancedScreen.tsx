@@ -260,60 +260,63 @@ const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
           />
           <List.Item
             title={getString('advancedSettingsScreen.userAgent')}
-            description={userAgent}
+            description="Tap to customize"
             onPress={showUserAgentModal}
             theme={theme}
           />
         </List.Section>
         {Platform.OS === 'web' && (
-          <List.Section>
-            <List.SubHeader theme={theme}>
-              External Proxy Configuration
-            </List.SubHeader>
-            <List.Item
-              title="Enable Proxy"
-              description={
-                proxyEnabled ? 'Proxy is enabled' : 'Proxy is disabled'
-              }
-              onPress={() => setProxyEnabled(!proxyEnabled)}
-              right={proxyEnabledRightRenderer}
-              theme={theme}
-            />
-            <List.Item
-              title="Configure Proxy URL"
-              description={proxyUrl || 'No proxy configured'}
-              onPress={showProxyModal}
-              theme={theme}
-            />
-            <List.InfoItem
-              title="Configure an external CORS proxy running on the same device (e.g., localhost:8080). The proxy should support forwarding cookies for Cloudflare bypass."
-              icon="information-outline"
-              theme={theme}
-            />
-          </List.Section>
-        )}
-        {Platform.OS === 'web' && proxyEnabled && (
-          <List.Section>
-            <List.SubHeader theme={theme}>Cloudflare Bypass</List.SubHeader>
-            <List.Item
-              title="Enable Cloudflare Bypass"
-              description={
-                cloudflareBypassEnabled
-                  ? 'Cookies from WebView will be forwarded'
-                  : 'Cloudflare bypass is disabled'
-              }
-              onPress={() =>
-                setCloudflareBypassEnabled(!cloudflareBypassEnabled)
-              }
-              right={cloudflareBypassRightRenderer}
-              theme={theme}
-            />
-            <List.InfoItem
-              title="When enabled, cookies from WebView sessions (including Cloudflare clearance cookies) will be forwarded through the proxy. Open the source in WebView first to solve Cloudflare challenges, then use the app normally."
-              icon="shield-check-outline"
-              theme={theme}
-            />
-          </List.Section>
+          <>
+            <View style={{ height: 120 }} />
+            <List.Section>
+              <List.SubHeader theme={theme}>
+                External Proxy Configuration
+              </List.SubHeader>
+              <List.Item
+                title="Enable Proxy"
+                description={
+                  proxyEnabled ? 'Proxy is enabled' : 'Proxy is disabled'
+                }
+                onPress={() => setProxyEnabled(!proxyEnabled)}
+                right={proxyEnabledRightRenderer}
+                theme={theme}
+              />
+              <List.Item
+                title="Configure Proxy URL"
+                description={proxyUrl || 'No proxy configured'}
+                onPress={showProxyModal}
+                theme={theme}
+              />
+              <List.InfoItem
+                title="Configure an external CORS proxy running on the same device (e.g., localhost:8080). The proxy should support forwarding cookies for Cloudflare bypass."
+                icon="information-outline"
+                theme={theme}
+              />
+            </List.Section>
+            {proxyEnabled && (
+              <List.Section>
+                <List.SubHeader theme={theme}>Cloudflare Bypass</List.SubHeader>
+                <List.Item
+                  title="Enable Cloudflare Bypass"
+                  description={
+                    cloudflareBypassEnabled
+                      ? 'Cookies from WebView will be forwarded'
+                      : 'Cloudflare bypass is disabled'
+                  }
+                  onPress={() =>
+                    setCloudflareBypassEnabled(!cloudflareBypassEnabled)
+                  }
+                  right={cloudflareBypassRightRenderer}
+                  theme={theme}
+                />
+                <List.InfoItem
+                  title="When enabled, cookies from WebView sessions (including Cloudflare clearance cookies) will be forwarded through the proxy. Open the source in WebView first to solve Cloudflare challenges, then use the app normally."
+                  icon="shield-check-outline"
+                  theme={theme}
+                />
+              </List.Section>
+            )}
+          </>
         )}
       </ScrollView>
       <Portal>
