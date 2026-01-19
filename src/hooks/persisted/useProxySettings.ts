@@ -3,10 +3,12 @@ import { MMKVStorage } from '@utils/mmkv/mmkv';
 
 const PROXY_URL_KEY = 'APP_PROXY_URL';
 const PROXY_ENABLED_KEY = 'APP_PROXY_ENABLED';
+const CLOUDFLARE_BYPASS_ENABLED_KEY = 'APP_CLOUDFLARE_BYPASS_ENABLED';
 
 export interface ProxySettings {
   proxyUrl: string;
   proxyEnabled: boolean;
+  cloudflareBypassEnabled: boolean;
 }
 
 export const useProxySettings = () => {
@@ -18,6 +20,12 @@ export const useProxySettings = () => {
     const enabled = MMKVStorage.getString(PROXY_ENABLED_KEY);
     return enabled === 'true';
   });
+
+  const [cloudflareBypassEnabled, setCloudflareBypassEnabledState] =
+    useState<boolean>(() => {
+      const enabled = MMKVStorage.getString(CLOUDFLARE_BYPASS_ENABLED_KEY);
+      return enabled === 'true';
+    });
 
   const setProxyUrl = useCallback((url: string) => {
     if (url && url.trim() !== '') {
@@ -33,11 +41,18 @@ export const useProxySettings = () => {
     setProxyEnabledState(enabled);
   }, []);
 
+  const setCloudflareBypassEnabled = useCallback((enabled: boolean) => {
+    MMKVStorage.set(CLOUDFLARE_BYPASS_ENABLED_KEY, enabled ? 'true' : 'false');
+    setCloudflareBypassEnabledState(enabled);
+  }, []);
+
   return {
     proxyUrl,
     proxyEnabled,
+    cloudflareBypassEnabled,
     setProxyUrl,
     setProxyEnabled,
+    setCloudflareBypassEnabled,
   };
 };
 
@@ -45,7 +60,9 @@ export const useProxySettings = () => {
 export const getProxySettings = (): ProxySettings => {
   const proxyUrl = MMKVStorage.getString(PROXY_URL_KEY) || '';
   const proxyEnabled = MMKVStorage.getString(PROXY_ENABLED_KEY) === 'true';
-  return { proxyUrl, proxyEnabled };
+  const cloudflareBypassEnabled =
+    MMKVStorage.getString(CLOUDFLARE_BYPASS_ENABLED_KEY) === 'true';
+  return { proxyUrl, proxyEnabled, cloudflareBypassEnabled };
 };
 
 export const getEffectiveProxyUrl = (): string | null => {
@@ -54,4 +71,8 @@ export const getEffectiveProxyUrl = (): string | null => {
     return proxyUrl.trim();
   }
   return null;
+};
+
+export const isCloudflareBypassEnabled = (): boolean => {
+  return getProxySettings().cloudflareBypassEnabled;
 };

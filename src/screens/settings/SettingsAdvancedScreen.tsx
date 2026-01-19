@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 
 import { Portal, Text, TextInput } from 'react-native-paper';
 
@@ -51,8 +51,14 @@ const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
   const [userAgentInput, setUserAgentInput] = useState(userAgent);
 
   // Proxy settings
-  const { proxyUrl, proxyEnabled, setProxyUrl, setProxyEnabled } =
-    useProxySettings();
+  const {
+    proxyUrl,
+    proxyEnabled,
+    cloudflareBypassEnabled,
+    setProxyUrl,
+    setProxyEnabled,
+    setCloudflareBypassEnabled,
+  } = useProxySettings();
   const [proxyUrlInput, setProxyUrlInput] = useState(proxyUrl);
   const [testingProxy, setTestingProxy] = useState(false);
   const [proxyTestResult, setProxyTestResult] = useState<string | null>(null);
@@ -172,6 +178,31 @@ const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
     }
   };
 
+  // Memoize render functions to avoid unstable component warnings
+  const proxyEnabledRightRenderer = useMemo(
+    () => () =>
+      (
+        <ProxySwitchControl
+          value={proxyEnabled}
+          onValueChange={setProxyEnabled}
+          color={theme.primary}
+        />
+      ),
+    [proxyEnabled, setProxyEnabled, theme.primary],
+  );
+
+  const cloudflareBypassRightRenderer = useMemo(
+    () => () =>
+      (
+        <ProxySwitchControl
+          value={cloudflareBypassEnabled}
+          onValueChange={setCloudflareBypassEnabled}
+          color={theme.primary}
+        />
+      ),
+    [cloudflareBypassEnabled, setCloudflareBypassEnabled, theme.primary],
+  );
+
   return (
     <SafeAreaView excludeTop>
       <Appbar
@@ -237,7 +268,7 @@ const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
         {Platform.OS === 'web' && (
           <List.Section>
             <List.SubHeader theme={theme}>
-              CORS Proxy Configuration
+              External Proxy Configuration
             </List.SubHeader>
             <List.Item
               title="Enable Proxy"
@@ -245,13 +276,7 @@ const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
                 proxyEnabled ? 'Proxy is enabled' : 'Proxy is disabled'
               }
               onPress={() => setProxyEnabled(!proxyEnabled)}
-              right={() => (
-                <ProxySwitchControl
-                  value={proxyEnabled}
-                  onValueChange={setProxyEnabled}
-                  color={theme.primary}
-                />
-              )}
+              right={proxyEnabledRightRenderer}
               theme={theme}
             />
             <List.Item
@@ -261,8 +286,31 @@ const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
               theme={theme}
             />
             <List.InfoItem
-              title="A CORS proxy is needed to fetch content from external sources on web. Without a proxy, most plugin sources will not work due to browser security restrictions."
+              title="Configure an external CORS proxy running on the same device (e.g., localhost:8080). The proxy should support forwarding cookies for Cloudflare bypass."
               icon="information-outline"
+              theme={theme}
+            />
+          </List.Section>
+        )}
+        {Platform.OS === 'web' && proxyEnabled && (
+          <List.Section>
+            <List.SubHeader theme={theme}>Cloudflare Bypass</List.SubHeader>
+            <List.Item
+              title="Enable Cloudflare Bypass"
+              description={
+                cloudflareBypassEnabled
+                  ? 'Cookies from WebView will be forwarded'
+                  : 'Cloudflare bypass is disabled'
+              }
+              onPress={() =>
+                setCloudflareBypassEnabled(!cloudflareBypassEnabled)
+              }
+              right={cloudflareBypassRightRenderer}
+              theme={theme}
+            />
+            <List.InfoItem
+              title="When enabled, cookies from WebView sessions (including Cloudflare clearance cookies) will be forwarded through the proxy. Open the source in WebView first to solve Cloudflare challenges, then use the app normally."
+              icon="shield-check-outline"
               theme={theme}
             />
           </List.Section>
@@ -358,24 +406,25 @@ const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
 
         <Modal visible={proxyModalVisible} onDismiss={hideProxyModal}>
           <Text style={[styles.modalTitle, { color: theme.onSurface }]}>
-            Proxy URL Configuration
+            External Proxy URL Configuration
           </Text>
           <Text
             style={[styles.proxyDescription, { color: theme.onSurfaceVariant }]}
           >
-            Enter the URL of your CORS proxy server. The proxy should accept a
-            'url' query parameter.
+            Enter the URL of your CORS proxy running on the same device (e.g.,
+            localhost). The proxy should accept a 'url' query parameter and
+            forward cookies for Cloudflare bypass.
           </Text>
           <Text
             style={[styles.proxyExample, { color: theme.onSurfaceVariant }]}
           >
-            Example: https://your-proxy.example.com?url=TARGET_URL
+            Example: http://localhost:8080?url=TARGET_URL
           </Text>
           <TextInput
             mode="outlined"
             defaultValue={proxyUrl}
             onChangeText={text => setProxyUrlInput(text.trim())}
-            placeholder="https://your-cors-proxy.example.com"
+            placeholder="http://localhost:8080"
             placeholderTextColor={theme.onSurfaceDisabled}
             underlineColor={theme.outline}
             style={[{ color: theme.onSurface }, styles.proxyInput]}

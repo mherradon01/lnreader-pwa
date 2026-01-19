@@ -17,6 +17,73 @@ export const getProxyUrl = (): string | null => {
 };
 
 /**
+ * Gets whether Cloudflare bypass is enabled.
+ */
+export const getCloudflareBypassEnabled = (): boolean => {
+  try {
+    const {
+      isCloudflareBypassEnabled,
+    } = require('@hooks/persisted/useProxySettings');
+    return isCloudflareBypassEnabled();
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Gets cookies for a specific URL from WebView storage.
+ * On web, this returns cookies from the browser's document.cookie and plugin storage.
+ */
+export const getCookiesForUrl = (_url: string): string => {
+  if (Platform.OS !== 'web') {
+    return '';
+  }
+
+  try {
+    // Get cookies from browser
+    const browserCookies = document.cookie;
+
+    // Try to get cookies from plugin storage (saved from WebView)
+    const {
+      store,
+      WEBVIEW_LOCAL_STORAGE,
+    } = require('@plugins/helpers/storage');
+
+    // Look for stored cookies in plugin storage
+    const allKeys = store.getAllKeys();
+    const cookieKeys = allKeys.filter(
+      (key: string) =>
+        key.includes(WEBVIEW_LOCAL_STORAGE) || key.includes('cookie'),
+    );
+
+    let storedCookies = '';
+    for (const key of cookieKeys) {
+      try {
+        const value = store.getString(key);
+        if (value) {
+          const parsed = JSON.parse(value);
+          if (parsed && typeof parsed === 'object') {
+            // If it's stored cookie data, extract it
+            for (const [cookieName, cookieValue] of Object.entries(parsed)) {
+              if (cookieValue && typeof cookieValue === 'string') {
+                storedCookies += `${cookieName}=${cookieValue}; `;
+              }
+            }
+          }
+        }
+      } catch {
+        // Ignore parsing errors
+      }
+    }
+
+    // Combine browser cookies and stored cookies
+    return [browserCookies, storedCookies].filter(Boolean).join('; ');
+  } catch {
+    return '';
+  }
+};
+
+/**
  * Rewrites URLs to use the configured proxy if one is set.
  * If no proxy is configured, returns the URL unchanged.
  * On native platforms, always returns URL unchanged (native handles CORS differently).
@@ -64,12 +131,14 @@ export const proxyUrl = (url: string): string => {
  * Fetch wrapper that automatically proxies URLs if a proxy is configured.
  * If no proxy is configured, uses direct fetch.
  * Adds headers to make requests appear as if they're coming from the legitimate site.
+ * When Cloudflare bypass is enabled, includes cookies from WebView sessions.
  */
 export const proxyFetch = (
   url: string,
   options?: RequestInit,
 ): Promise<Response> => {
   const proxiedUrl = proxyUrl(url);
+  const cloudflareBypass = getCloudflareBypassEnabled();
 
   // Extract the origin from the original URL for proper headers
   let origin = '';
@@ -121,10 +190,20 @@ export const proxyFetch = (
     headers.set('Accept-Encoding', 'gzip, deflate, br');
   }
 
+  // When Cloudflare bypass is enabled, add cookies from WebView sessions
+  if (cloudflareBypass && Platform.OS === 'web' && !headers.has('Cookie')) {
+    const cookies = getCookiesForUrl(url);
+    if (cookies) {
+      headers.set('Cookie', cookies);
+    }
+  }
+
   // Merge with original options
   const enhancedOptions: RequestInit = {
     ...options,
     headers,
+    // Include credentials for same-origin requests when Cloudflare bypass is enabled
+    credentials: cloudflareBypass ? 'include' : options?.credentials,
   };
 
   return fetch(proxiedUrl, enhancedOptions);
