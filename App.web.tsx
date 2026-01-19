@@ -3,8 +3,8 @@ import { enableFreeze } from 'react-native-screens';
 
 enableFreeze(true);
 
-import React, { useEffect } from 'react';
-import { StatusBar, StyleSheet, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StatusBar, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider as PaperProvider } from 'react-native-paper';
@@ -14,14 +14,18 @@ import AppErrorBoundary, {
 } from '@components/AppErrorBoundary/AppErrorBoundary';
 import { useDatabaseInitialization } from '@hooks';
 import { useWebSafeAreaInsets } from '@hooks/useWebSafeAreaInsets.web';
+import { useServiceWorkerUpdate } from '@hooks/common/useServiceWorkerUpdate';
 
 import Main from './src/navigators/Main';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import PWAUpdateNotification from './src/components/PWAUpdateNotification';
 
 const App = () => {
   const { isDbReady, dbError, retryInitialization } =
     useDatabaseInitialization();
   const webInsets = useWebSafeAreaInsets();
+  const { isUpdateAvailable, skipWaiting } = useServiceWorkerUpdate();
+  const [showUpdateNotification, setShowUpdateNotification] = useState(false);
 
   useEffect(() => {
     // Hide HTML loading screen immediately when React app mounts
@@ -35,9 +39,17 @@ const App = () => {
   useEffect(() => {
     // Log when app is ready
     if (isDbReady || dbError) {
+      // eslint-disable-next-line no-console
       console.log('App ready');
     }
   }, [isDbReady, dbError]);
+
+  useEffect(() => {
+    // Show notification when update is available
+    if (isUpdateAvailable) {
+      setShowUpdateNotification(true);
+    }
+  }, [isUpdateAvailable]);
 
   if (dbError) {
     return (
@@ -64,6 +76,11 @@ const App = () => {
             <BottomSheetModalProvider>
               <StatusBar translucent={true} backgroundColor="transparent" />
               <Main />
+              <PWAUpdateNotification
+                visible={showUpdateNotification}
+                onDismiss={() => setShowUpdateNotification(false)}
+                onUpdate={skipWaiting}
+              />
             </BottomSheetModalProvider>
           </PaperProvider>
         </AppErrorBoundary>

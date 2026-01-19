@@ -21,3 +21,4 @@ export { DialogTitle } from './DialogTitle';
 export { default as BottomTabBar } from './BottomTabBar';
 export { default as Menu } from './Menu';
 export { default as ProxiedImage } from './ProxiedImage';
+export { default as PWAUpdateNotification } from './PWAUpdateNotification';

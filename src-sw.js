@@ -77,3 +77,10 @@ self.addEventListener('activate', event => {
   // console.log('Service Worker activating.');
   event.waitUntil(self.clients.claim());
 });
+
+// Handle messages from the client for PWA updates
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});

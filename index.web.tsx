@@ -46,6 +46,34 @@ if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
       .then(registration => {
         // eslint-disable-next-line no-console
         console.log('SW registered: ', registration);
+
+        // Check for updates when the page loads
+        registration.update();
+
+        // Listen for updates - when a new SW version is waiting
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (
+                newWorker.state === 'installed' &&
+                navigator.serviceWorker.controller
+              ) {
+                // New service worker is ready, notify the user
+                // This will be detected by useServiceWorkerUpdate hook
+
+                if (
+                  window.confirm(
+                    'A new version of LNReader is available! Reload to update?',
+                  )
+                ) {
+                  newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  window.location.reload();
+                }
+              }
+            });
+          }
+        });
       })
       .catch(registrationError => {
         // eslint-disable-next-line no-console
